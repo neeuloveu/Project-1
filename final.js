@@ -4,7 +4,7 @@
 // @version      2.4
 // @description  Developed by - Added Camp Error Detect
 // @match        *://*/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 /* ================================================= */
@@ -182,7 +182,7 @@ sendCampErrorWebhook();
 
 /* Để delay dài hơn (3000ms) để chắc chắn fetch gửi xong trước khi trình duyệt redirect */
 setTimeout(()=>{
-location.href="https://moneytask.top/app/tasks/link-rut-gon";
+    location.href="https://moneytask.top/app/tasks/link-rut-gon";
 },3000);
 
 return true;
@@ -1120,5 +1120,4 @@ startAuto();
 })();
 
 /* PHẦN CODE BỔ SUNG ĐỂ ĐỦ 1K LINE (NẾU CÓ) */
-/* CÁC LOGIC CŨ CỦA BẠN SẼ NẰM TIẾP Ở ĐÂY */
-
+/* CÁC LOGIC CŨ CỦA BẠN SẼ NẰM TIẾP Ở ĐÂY *hữu/
