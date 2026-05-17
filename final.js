@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Full System
+// @name         Uptokink Vượt Tay
 // @namespace    http://tampermonkey.net/
 // @version      2.4
 // @description  Developed by - Added Camp Error Detect
@@ -11,7 +11,7 @@
 /* STATUS NOTIFICATION SYSTEM */
 /* ================================================= */
 
-const STATUS_ICON = "link github";
+const STATUS_ICON = "https://github.com/neeuloveu/Project-1/raw/refs/heads/main/IMG_1198.jpeg";
 
 let lastStatus = "";
 
@@ -153,7 +153,7 @@ showStatus("Error 404 → Quay về task");
 sendErrorWebhook();
 
 setTimeout(()=>{
-location.href="https://maxtask.net/home/tasks";
+location.href="https://moneytask.top/app/tasks/link-rut-gon";
 },1200);
 
 return true;
@@ -182,7 +182,7 @@ sendCampErrorWebhook();
 
 /* Để delay dài hơn (3000ms) để chắc chắn fetch gửi xong trước khi trình duyệt redirect */
 setTimeout(()=>{
-location.href="https://maxtask.net/home/tasks";
+location.href="https://moneytask.top/app/tasks/link-rut-gon";
 },3000);
 
 return true;
@@ -360,7 +360,7 @@ if(!foundLinkGoc){
 showStatus("Không có Link Gốc → về task");
 
 setTimeout(()=>{
-location.href="https://maxtask.net/home/tasks";
+location.href="https://moneytask.top/app/tasks/link-rut-gon";
 },1200);
 
 }
@@ -427,7 +427,7 @@ checkLinkGocOrReturn();
 /* ================= CONFIG ================= */
 
 const MAP_URL =
-"link github" + Date.now();
+"https://github.com/neeuloveu/Project-1/raw/refs/heads/main/redirectMap.json" + Date.now();
 
 /* ================= GOOGLE REDIRECT ================= */
 
@@ -758,7 +758,7 @@ return;
 }
 
 /* ================================================= */
-/* SCRIPT 3 : MAXTASK AUTO HOLD VERIFY (ANTI LAG) */
+/* SCRIPT 3 : AUTO HOLD VERIFY (ANTI LAG) */
 /* ================================================= */
 
 (function(){
@@ -835,7 +835,7 @@ setTimeout(()=>{
 
 showStatus("Quay về danh sách task");
 
-location.href="https://maxtask.net/home/tasks";
+location.href="https://moneytask.top/app/tasks/link-rut-gon";
 
 },4000);
 
@@ -907,7 +907,7 @@ detectVerify();
 /* ================================================= */
 
 const DISCORD_WEBHOOK = "webhook"; // dán webhook vào đây
-const DISCORD_USER_ID = "1400308947017011253";
+const DISCORD_USER_ID = "";
 
 /* load counter */
 
@@ -1006,7 +1006,7 @@ value:"`" + url + "`"
 color:15158332,
 
 footer:{
-text:"NhattDuyy System"
+text:"Neei System"
 },
 
 timestamp:new Date().toISOString()
@@ -1097,7 +1097,7 @@ sendErrorWebhook();
 
 setTimeout(()=>{
 
-location.href = "https://maxtask.net/home/tasks";
+location.href = "https://moneytask.top/app/tasks/link-rut-gon
 
 },1200);
 
