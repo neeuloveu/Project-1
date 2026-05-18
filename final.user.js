@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Full System (Fixed v3.3 + Custom UI)
+// @name         Full System (Fixed v3.4 + Auto UI Setup)
 // @namespace    http://tampermonkey.net/
-// @version      3.3
-// @description  Developed by Neei - Fixed UI Missing & Loop Redirect
+// @version      3.4
+// @description  Developed by Neei - Fixed UI Logic & Strict Traffic Clicks
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -12,7 +12,7 @@
 /* ================================================= */
 
 const STATUS_ICON = "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/IMG_1198.jpeg";
-const DISCORD_WEBHOOK = ""; // ← dán webhook vào đây
+const DISCORD_WEBHOOK = ""; 
 const DISCORD_USER_ID = "";
 
 /* ── shared flags ── */
@@ -72,7 +72,7 @@ function createStatusBar() {
       <img src="${STATUS_ICON}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.4);">
       <div style="display: flex; flex-direction: column;">
         <span style="font-weight: 700; font-size: 15px; color: #2ecc71; letter-spacing: 0.5px;">UptoTool</span>
-        <span style="font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600;">System Auto v3.3</span>
+        <span style="font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600;">System Auto v3.4</span>
       </div>
     </div>
 
@@ -100,7 +100,7 @@ function createStatusBar() {
 
 function showStatus(text) {
   if (!document.body) {
-    window.addEventListener("DOMContentLoaded", () => showStatus(text));
+    setTimeout(() => { showStatus(text); }, 100);
     return;
   }
 
@@ -182,7 +182,7 @@ function showStatus(text) {
   }, "showStatus");
 }
 
-/* Khởi tạo hiển thị ban đầu dựa theo loại trang */
+/* Khởi tạo trạng thái ban đầu */
 if (location.hostname.includes("moneytask.top")) {
   showStatus("Hệ Thống Sẵn Sàng");
 } else {
@@ -369,7 +369,7 @@ function sendCampErrorWebhook() {
             location.href = "https://moneytask.top/app/tasks/link-rut-gon";
           }, 1200);
         }
-      }, 5000);
+      }, 7000);
     }, "checkLinkGocOrReturn");
   }
 
@@ -419,19 +419,10 @@ function sendCampErrorWebhook() {
     safe(unlockButton, "unlockPoll");
   }, 1500);
 
-  if (
-    location.hostname === "uptolink.one" &&
-    location.pathname.startsWith("/finish")
-  ) {
+  // FIX STRICT: Chỉ chạy quét Link Gốc trên đúng miền hệ thống rút gọn, không chạy bừa bãi ở trang traffic
+  if (location.hostname.includes("uptolink.one")) {
     setInterval(() => {
       safe(detectLinkGoc, "linkGocPoll");
-    }, 1200);
-    checkLinkGocOrReturn();
-  }
-
-  if (!(location.hostname === "uptolink.one" && location.pathname.startsWith("/finish"))) {
-    setInterval(() => {
-      safe(detectLinkGoc, "linkGocGeneral");
     }, 1200);
     checkLinkGocOrReturn();
   }
@@ -444,6 +435,8 @@ function sendCampErrorWebhook() {
 
 (async function script2() {
   "use strict";
+
+  if (location.hostname.includes("moneytask.top")) return;
 
   const MAP_URL =
     "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/redirectMap.json?" +
@@ -499,8 +492,7 @@ function sendCampErrorWebhook() {
   function autoScrollPage() {
     if (
       location.hostname.includes("maxtask.net") ||
-      location.hostname.includes("uptolink.one") ||
-      location.hostname.includes("moneytask.top")
+      location.hostname.includes("uptolink.one")
     ) return;
 
     if (window.__nevScrolled) return;
@@ -516,37 +508,32 @@ function sendCampErrorWebhook() {
   function clickButtons() {
     safe(() => {
       const now = Date.now();
-      const elements = document.querySelectorAll("a,button,.btn,div,span");
+      const elements = document.querySelectorAll("a,button,.btn,div,span,input");
 
       elements.forEach(el => {
         if (el.offsetParent === null) return;
         if (el.offsetWidth < 4 || el.offsetHeight < 4) return;
 
-        const text = (el.innerText || "").trim().toUpperCase();
+        const text = (el.innerText || el.value || "").trim().toUpperCase();
         if (!text) return;
 
+        // FIX FIX: Mở rộng bộ lọc click cho toàn bộ từ khóa lấy mã giao diện Traffic Việt Nam
         if (
           text.includes("STEP 1") ||
           text.includes("STEP 2") ||
-          text.includes("STEP 3")
+          text.includes("STEP 3") ||
+          text.includes("LẤY MÃ") ||
+          text.includes("VƯỢT MÃ") ||
+          text.includes("CLICK ĐỂ TIẾP TỤC") ||
+          text.includes("NHẤN ĐỂ TIẾP TỤC")
         ) {
           if (_stepClicked[text] && (now - _stepClicked[text]) < 4000) return;
           _stepClicked[text] = now;
 
-          showStatus(text);
+          showStatus(text.includes("STEP 2") ? "STEP 2" : "STEP 1");
           nevScanTime = 0;
           el.scrollIntoView({ block: "center" });
           safeClick(el);
-        }
-
-        if (text.includes("NHẤN ĐỂ TIẾP TỤC")) {
-          if (_stepClicked["CONTINUE"] && (now - _stepClicked["CONTINUE"]) < 5000) return;
-          _stepClicked["CONTINUE"] = now;
-
-          showStatus("Continue step");
-          nevScanTime = 0;
-          el.scrollIntoView({ block: "center" });
-          setTimeout(() => { safeClick(el); }, 2000);
         }
 
         if (
@@ -609,8 +596,6 @@ function sendCampErrorWebhook() {
 
     setInterval(() => {
       safe(() => {
-        if (location.hostname.includes("moneytask.top")) return;
-        
         const body = (document.body.innerText || "").toUpperCase();
         if (
           body.includes("NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC") ||
@@ -758,7 +743,8 @@ setInterval(() => {
     if (!nevScanTime) return;
     if (location.hostname.includes("moneytask.top")) return;
 
-    if (Date.now() - nevScanTime > 7000) {
+    // Tăng thời gian tối đa chờ đợi lên 25 giây để tránh lỗi tải trang chậm bị văng về
+    if (Date.now() - nevScanTime > 25000) {
       showStatus("Không mã → quay về task");
       sendErrorWebhook();
       nevScanTime = 0;
