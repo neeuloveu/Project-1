@@ -1,14 +1,13 @@
 // ==UserScript==
-// @name         Neei Tool (Neon Green UI Edition)
-// @namespace    https://github.com/catdzs1vn
-// @version      1.3
-// @description  Auto Link cho maxtask.net & kiemmoney.com — Giao diện Neon Green cố định tinh gọn
-// @author       @catdzs1vn
-// @match        https://maxtask.net/*
-// @match        https://kiemmoney.com/*
+// @name         Neei Tool (Neon Green UI Edition) - v1.4
+// @version      1.4
+// @description  Auto Link cho moneytask.top & kiemmoney.com — Giao diện Neon Green cố định tinh gọn, Thu gọn UI, Auto Redirect JSON
+// @author       @neeiloveu
 // @match        https://huongdangetlink.com/*
 // @match        https://uptolink.net/*
 // @match        https://*.uptolink.*/*
+// @match        https://moneytask.top/*
+// @match        https://kiemmoney.com/*
 // @match        https://*/*
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -24,6 +23,9 @@
 
     // ─── Global Config ────────────────────────────────────────────────────────
     const STATUS_ICON = "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/IMG_1198.jpeg";
+    const REDIRECT_MAP_URL = "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/redirectMap.json";
+    
+    let redirectMapData = null;
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
     function el(id) { return document.getElementById(id); }
@@ -53,10 +55,31 @@
             backdrop-filter: blur(16px);
             box-sizing: border-box;
             user-select: none;
+            transition: all 0.3s ease;
         }
-        #cb-drag { cursor: grab; margin-bottom: 10px; }
+        #cb-widget.minimized {
+            width: 180px !important;
+            padding: 8px 14px !important;
+        }
+        #cb-widget.minimized .cb-body { display: none !important; }
+        
+        #cb-drag { 
+            cursor: grab; margin-bottom: 10px; 
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #cb-widget.minimized #cb-drag { margin-bottom: 0; }
         #cb-drag:active { cursor: grabbing; }
-        .cb-body { display: flex; flex-direction: column; width: 100%; }
+
+        .cb-minimize-btn {
+            background: #0f2418; border: 1px solid #2ecc71; color: #2ecc71;
+            width: 22px; height: 22px; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; cursor: pointer; font-size: 14px;
+            transition: all 0.2s;
+        }
+        .cb-minimize-btn:hover { background: #2ecc71; color: #040906; }
+
+        .cb-body { display: flex; flex-direction: column; width: 100%; transition: all 0.3s ease; }
         
         .cb-toggleRow {
             display: flex; align-items: center; justify-content: space-between;
@@ -140,7 +163,7 @@
             text-align: center; border: 1px solid #143016; line-height: 1.2;
         }
         .cb-redir-btn .cb-btn-label { font-size: 8px; font-weight: 500; opacity: 0.4; display: block; margin-top: 1px; }
-        .cb-redir-btn.maxtask { background: linear-gradient(180deg, #0f2418, #08120b); color: #2ecc71; border-color: #2ecc71; }
+        .cb-redir-btn.moneytask { background: linear-gradient(180deg, #0f2418, #08120b); color: #2ecc71; border-color: #2ecc71; }
         .cb-redir-btn.kiemoney { background: linear-gradient(180deg, #16240f, #0b1208); color: #a2ec71; border-color: #a2ec71; }
         .cb-redir-btn:active { transform: scale(0.96); }
         
@@ -153,7 +176,34 @@
         .cb-phase.running { color: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.25); }
     `);
 
-    // ─── Inject Widget HTML (Cấu trúc tinh gọn chuẩn Neei Tool) ───────────────
+    // ─── Fetch Redirect Map ───────────────────────────────────────────────────
+    function loadRedirectMap() {
+        fetch(REDIRECT_MAP_URL)
+            .then(r => r.json())
+            .then(data => {
+                redirectMapData = data;
+                console.log('NeeiTool: Loaded redirectMap.json');
+            })
+            .catch(err => console.log('NeeiTool Error: Load redirect map failed', err));
+    }
+
+    function checkMapRedirect() {
+        if (!redirectMapData || !isOn()) return false;
+        let url = window.location.href;
+        for (let key in redirectMapData) {
+            if (url.includes(key)) {
+                let target = redirectMapData[key];
+                if (target && target !== url) {
+                    setPhase('Redirect JSON...', true);
+                    window.location.href = target;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // ─── Inject Widget HTML ───────────────────────────────────────────────────
     function injectWidget() {
         if (el('cb-widget')) return;
         var widget = document.createElement('div');
@@ -164,9 +214,10 @@
                   <img src="${STATUS_ICON}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.3);">
                   <div style="display: flex; flex-direction: column;">
                     <span style="font-weight: 800; font-size: 14px; color: #2ecc71; letter-spacing: 0.5px;">Neei Tool</span>
-                    <span style="font-size: 9px; color: #5c6e62; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px;">Premium Auto v1.3</span>
+                    <span style="font-size: 9px; color: #5c6e62; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px;">Premium Auto v1.4</span>
                   </div>
                 </div>
+                <div class="cb-minimize-btn" id="cb-min-btn">_</div>
             </div>
             <div class="cb-body">
                 <div class="cb-toggleRow" id="cb-toggleRow">
@@ -208,8 +259,8 @@
                         <span class="cb-rd-sub" id="cb-rd-sub">Chọn trang để tiếp tục làm nhiệm vụ</span>
                     </div>
                     <div class="cb-redirect-btns">
-                        <div class="cb-redir-btn maxtask" id="cb-goto-maxtask">
-                            MaxTask<span class="cb-btn-label">maxtask.net</span>
+                        <div class="cb-redir-btn moneytask" id="cb-goto-moneytask">
+                            MoneyTask<span class="cb-btn-label">moneytask.top</span>
                         </div>
                         <div class="cb-redir-btn kiemoney" id="cb-goto-kiemoney">
                             KiemMoney<span class="cb-btn-label">kiemmoney.com</span>
@@ -226,7 +277,15 @@
 
         setupDrag(widget);
 
-        // Bắt sự kiện change trực tiếp cho Toggle Switch để tránh trùng click nhầm
+        // Logic Minimize / Maximize
+        el('cb-min-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            var w = el('cb-widget');
+            w.classList.toggle('minimized');
+            this.innerText = w.classList.contains('minimized') ? '+' : '_';
+        });
+
+        // Bắt sự kiện change trực tiếp cho Toggle Switch
         var togInput = el('cb-tog');
         if (togInput) {
             togInput.addEventListener('change', function() {
@@ -243,20 +302,21 @@
         });
     }
 
-    // ─── Event Delegation trên Document (Bỏ check switch lỗi) ─────────────────
+    // ─── Event Delegation trên Document ───────────────────────────────────────
     document.addEventListener('click', function (e) {
         var t = e.target;
-        if (t.closest && t.closest('#cb-goto-maxtask')) { window.location.href = 'https://maxtask.net/home/tasks'; return; }
+        if (t.closest && t.closest('#cb-goto-moneytask')) { window.location.href = 'https://moneytask.top/home/tasks'; return; }
         if (t.closest && t.closest('#cb-goto-kiemoney')) { window.location.href = 'https://kiemmoney.com'; return; }
     });
 
-    // ─── Drag (Kéo thả Widget mượt mà trên PC và Mobile) ──────────────────────
+    // ─── Drag (Kéo thả Widget mượt mà) ────────────────────────────────────────
     function setupDrag(widget) {
         var drag = el('cb-drag');
         if (!drag) return;
         var dragging = false, ox = 0, oy = 0;
 
         drag.addEventListener('mousedown', function (e) {
+            if (e.target.id === 'cb-min-btn') return;
             dragging = true;
             var r = widget.getBoundingClientRect();
             ox = e.clientX - r.left; oy = e.clientY - r.top;
@@ -271,6 +331,7 @@
         document.addEventListener('mouseup', function () { dragging = false; });
 
         drag.addEventListener('touchstart', function (e) {
+            if (e.target.id === 'cb-min-btn') return;
             dragging = true;
             var t = e.touches[0], r = widget.getBoundingClientRect();
             ox = t.clientX - r.left; oy = t.clientY - r.top;
@@ -409,7 +470,7 @@
             if (!isOn()) { clearInterval(t); return; }
             if (document.body.innerText.includes('Quay về Nhiệm vụ')) {
                 clearInterval(t); setStep(null); setTask(null); setPhase('Xong ✓', false);
-                setTimeout(function () { window.location.href = 'https://maxtask.net/home/tasks'; }, 1200);
+                setTimeout(function () { window.location.href = 'https://moneytask.top/home/tasks'; }, 1200);
             }
         }, 500);
     }
@@ -491,7 +552,7 @@
         var links = document.querySelectorAll('a[href]');
         for (var i = 0; i < links.length; i++) {
             var h = links[i].href;
-            if (h.includes('maxtask.net/task/') || h.includes('kiemmoney.com/rewards/')) {
+            if (h.includes('moneytask.top/task/') || h.includes('kiemmoney.com/rewards/')) {
                 window.location.href = h; return true;
             }
         }
@@ -512,10 +573,11 @@
     function check404() {
         var body = document.body.innerText, u = window.location.href;
         if (!u.includes('uptolink')) return false;
-        if (body.includes('Not Found') || body.includes('was not found on this server') || body.includes('404') || body.includes('không tìm thấy')) {
-            showRedirect('404 — Quest không tồn tại', 'Link đã hết hạn hoặc sai — chọn trang tiếp theo');
-            setPhase('404 Quest', false);
-            storage.set({ catbell_active: false }); catbell19(false); return true;
+        if (body.includes('Not Found') || body.includes('was not found on this (server') || body.includes('404') || body.includes('không tìm thấy')) {
+            // TỰ ĐỘNG REDIRECT KHI 404 THAY VÌ HIỆN POPUP
+            setPhase('Lỗi 404 - Back to Task', true);
+            setTimeout(() => { window.location.href = 'https://moneytask.top/home/tasks'; }, 1000);
+            return true;
         }
         return false;
     }
@@ -530,7 +592,7 @@
         }
         storage.get('catbell_paused_by_km', function (d) {
             if (d.catbell_paused_by_km) {
-                storage.remove('catbell_paused_by_km');
+                 storage.remove('catbell_paused_by_km');
                 storage.set({ catbell_active: true }); catbell19(true); catbell32();
             }
         });
@@ -539,6 +601,10 @@
 
     function runLogic() {
         if (!isOn()) return;
+        
+        // Chạy kiểm tra redirect từ JSON map
+        if (checkMapRedirect()) return;
+
         if (document.readyState !== 'complete') {
             setPhase('Đợi trang load...', true);
             window.addEventListener('load', runLogic, { once: true }); return;
@@ -549,15 +615,15 @@
         var body = document.body.innerText;
         var curUrl = window.location.href;
 
-        // Giới hạn xử lý canvas chỉ kích hoạt trên trang shortlink/uptolink, tránh lỗi tràn sang web khác
+        // Giới hạn xử lý canvas
         if (document.querySelector('canvas') && (curUrl.includes('uptolink') || curUrl.includes('huongdangetlink'))) { 
             handleCanvas(); 
             return; 
         }
 
-        if (body.includes('Quay về Nhiệm vụ')) { setTimeout(function(){ window.location.href='https://maxtask.net/home/tasks'; }, 1000); return; }
-        if (curUrl.includes('maxtask.net/home/tasks')) { setPhase('Tìm nhiệm vụ...', true); startUptolink(); return; }
-        if (curUrl.includes('maxtask.net/task/') || curUrl.includes('kiemmoney.com/rewards/')) return;
+        if (body.includes('Quay về Nhiệm vụ')) { setTimeout(function(){ window.location.href='https://moneytask.top/home/tasks'; }, 1000); return; }
+        if (curUrl.includes('moneytask.top/home/tasks')) { setPhase('Tìm nhiệm vụ...', true); startUptolink(); return; }
+        if (curUrl.includes('moneytask.top/task/') || curUrl.includes('kiemmoney.com/rewards/')) return;
         if (findTaskLink()) return;
 
         if (body.includes('Bấm vào đây để tiếp tục') || el('invisibleCaptchaShortlink')) {
@@ -584,7 +650,10 @@
         else { document.addEventListener('DOMContentLoaded', runLogic, { once: true }); }
     }
 
-    // ─── Boot (Tự động Re-inject nếu DOM thay đổi hoặc bị trang web xóa) ─────
+    // Khởi tạo Map khi vừa vào script
+    loadRedirectMap();
+
+    // ─── Boot (Tự động Re-inject nếu DOM thay đổi) ───────────────────────────
     var _observer = new MutationObserver(function () {
         if (!el('cb-widget') && document.body) injectWidget();
     });
