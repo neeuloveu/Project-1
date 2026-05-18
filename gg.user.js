@@ -3,8 +3,8 @@
 // @version      1.4
 // @description  Auto Link cho moneytask.top — Giao diện Neon Green cố định tinh gọn, Thu gọn UI, Auto Redirect JSON
 // @author       @neeiloveu
-// @match        https://huongdangetlink.com/*
-// @match        https://uptolink.net/*
+// @match        https://linkhuongdan.net/*
+// @match        https://uptolink.one/*
 // @match        https://*.uptolink.*/*
 // @match        https://moneytask.top/*
 // @match        https://*/*
