@@ -1,17 +1,17 @@
 // ==UserScript==
 // @name         Neei Tool (Neon Green UI Edition) - v1.4
 // @version      1.4
-// @description  Auto Link cho moneytask.top & kiemmoney.com — Giao diện Neon Green cố định tinh gọn, Thu gọn UI, Auto Redirect JSON
+// @description  Auto Link cho moneytask.top — Giao diện Neon Green cố định tinh gọn, Thu gọn UI, Auto Redirect JSON
 // @author       @neeiloveu
 // @match        https://huongdangetlink.com/*
 // @match        https://uptolink.net/*
 // @match        https://*.uptolink.*/*
 // @match        https://moneytask.top/*
-// @match        https://kiemmoney.com/*
 // @match        https://*/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
+// @grant        GM_xmlhttpRequest
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -176,15 +176,26 @@
         .cb-phase.running { color: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.25); }
     `);
 
-    // ─── Fetch Redirect Map ───────────────────────────────────────────────────
+    // ─── Fetch Redirect Map (Đã sửa đổi để bypass bảo mật trình duyệt) ─────────
     function loadRedirectMap() {
-        fetch(REDIRECT_MAP_URL)
-            .then(r => r.json())
-            .then(data => {
-                redirectMapData = data;
-                console.log('NeeiTool: Loaded redirectMap.json');
-            })
-            .catch(err => console.log('NeeiTool Error: Load redirect map failed', err));
+        GM_xmlhttpRequest({
+            method: "GET",
+            url: REDIRECT_MAP_URL,
+            responseType: "json",
+            onload: function(response) {
+                if (response.status === 200) {
+                    redirectMapData = response.response || JSON.parse(response.responseText);
+                    console.log('NeeiTool: Loaded redirectMap.json successfully.');
+                    // Thực hiện kiểm tra redirect ngay lập tức khi map tải xong thành công
+                    if (isOn()) checkMapRedirect();
+                } else {
+                    console.log('NeeiTool Error: Load redirect map failed with status ' + response.status);
+                }
+            },
+            onerror: function(err) {
+                console.log('NeeiTool Error: GM_xmlhttpRequest request failed', err);
+            }
+        });
     }
 
     function checkMapRedirect() {
@@ -402,12 +413,14 @@
         } else if (box) { box.classList.remove('show'); }
     }
 
-    function startCountdownWatcher() { if (!_cd_timer) _cd_timer = setInterval(detectCountdown, 800); }
+    // Thiết lập thời gian quét đếm ngược nhanh hơn để tối ưu
+    function startCountdownWatcher() { if (!_cd_timer) _cd_timer = setInterval(detectCountdown, 600); }
     function stopCountdownWatcher()  { if (_cd_timer) { clearInterval(_cd_timer); _cd_timer = null; } hideCountdown(); }
 
     // ─── UI State Helpers ─────────────────────────────────────────────────────
     function isOn() { var t = el('cb-tog'); return t ? t.checked : false; }
 
+    // Đặt trạng thái Step
     function setStep(n, state) {
         for (var k = 1; k <= 3; k++) { var s = el('cb-s' + k); if (s) s.className = 'cb-step'; }
         if (n && state) { var s = el('cb-s' + n); if (s) s.className = 'cb-step ' + state; }
@@ -495,6 +508,7 @@
         return txt.includes('NHẤN LINK BẤT KỲ') || txt.includes('NHẤN ĐỂ TIẾP TỤC') || txt.includes('NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC');
     }
 
+    // Sửa lỗi chờ click nút tiếp tục lặp lại
     function waitContinue(n, cb) {
         setPhase('Chờ nút tiếp tục...', true);
         var firstSeen = false, lastClick = 0;
@@ -574,7 +588,6 @@
         var body = document.body.innerText, u = window.location.href;
         if (!u.includes('uptolink')) return false;
         if (body.includes('Not Found') || body.includes('was not found on this (server') || body.includes('404') || body.includes('không tìm thấy')) {
-            // TỰ ĐỘNG REDIRECT KHI 404 THAY VÌ HIỆN POPUP
             setPhase('Lỗi 404 - Back to Task', true);
             setTimeout(() => { window.location.href = 'https://moneytask.top/home/tasks'; }, 1000);
             return true;
@@ -602,10 +615,10 @@
     function runLogic() {
         if (!isOn()) return;
         
-        // Chạy kiểm tra redirect từ JSON map
+        // Luôn chạy kiểm tra map redirect đầu tiên
         if (checkMapRedirect()) return;
 
-        if (document.readyState !== 'complete') {
+        if (document.readyState !== 'complete' && document.readyState !== 'interactive') {
             setPhase('Đợi trang load...', true);
             window.addEventListener('load', runLogic, { once: true }); return;
         }
@@ -615,7 +628,6 @@
         var body = document.body.innerText;
         var curUrl = window.location.href;
 
-        // Giới hạn xử lý canvas
         if (document.querySelector('canvas') && (curUrl.includes('uptolink') || curUrl.includes('huongdangetlink'))) { 
             handleCanvas(); 
             return; 
@@ -650,7 +662,7 @@
         else { document.addEventListener('DOMContentLoaded', runLogic, { once: true }); }
     }
 
-    // Khởi tạo Map khi vừa vào script
+    // Khởi tạo và tải Map qua GM_xmlhttpRequest ngay khi vừa vào script
     loadRedirectMap();
 
     // ─── Boot (Tự động Re-inject nếu DOM thay đổi) ───────────────────────────
