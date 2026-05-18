@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Full System (Fixed v3.4 + Auto UI Setup)
+// @name         Full System (Fixed v3.6 - Auto Click Random Link)
 // @namespace    http://tampermonkey.net/
-// @version      3.4
-// @description  Developed by Neei - Fixed UI Logic & Strict Traffic Clicks
+// @version      3.6
+// @description  Developed by Neei - Fixed Countdown & Auto Click Internal Links for Traffic Tasks
 // @match        *://*/*
 // @grant        none
 // ==/UserScript==
@@ -20,17 +20,33 @@ let lastStatus       = "";
 let nevScanTime      = 0;
 let nevClickedContinue = false;
 let nevClickedLinkGoc  = false;
+let isUnlocking      = false; 
 
 /* task counter */
 let successTask = parseInt(localStorage.getItem("nev_success") || "0", 10);
 
 /* ================================================= */
-/* UTILITY — SAFE WRAPPER                           */
+/* UTILITY — SAFE WRAPPER & CLICK SIMULATOR          */
 /* ================================================= */
 
 function safe(fn, label) {
   try { fn(); }
   catch (e) { console.warn("[Nev] " + (label || "err"), e); }
+}
+
+function simulateClick(el) {
+  if (!el) return;
+  if (el.offsetParent === null) return;
+  if (el.offsetWidth < 1 || el.offsetHeight < 1) return;
+
+  try {
+    el.click();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    el.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  } catch (e) {
+    console.warn("[Nev] click fail", e);
+  }
 }
 
 /* ================================================= */
@@ -46,7 +62,6 @@ function createStatusBar() {
   const card = document.createElement("div");
   card.id = "nevUiCard";
 
-  /* Styling Container chính mô phỏng theo ảnh mẫu */
   Object.assign(card.style, {
     position:      "fixed",
     bottom:        "20px",
@@ -72,13 +87,12 @@ function createStatusBar() {
       <img src="${STATUS_ICON}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.4);">
       <div style="display: flex; flex-direction: column;">
         <span style="font-weight: 700; font-size: 15px; color: #2ecc71; letter-spacing: 0.5px;">UptoTool</span>
-        <span style="font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600;">System Auto v3.4</span>
+        <span style="font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600;">System Auto v3.6</span>
       </div>
     </div>
 
     <div style="display: flex; gap: 8px; margin-bottom: 14px; justify-content: flex-start;">
-      <span id="nevStep1" style="padding: 4px 14px; background: #0c1611; border: 1px solid #1b3325; border-radius: 20px; font-size: 11px; font-weight: 600; color: #4a6353; transition: all 0.3s;">Step 1</span>
-      <span id="nevStep2" style="padding: 4px 14px; background: #0c1611; border: 1px solid #1b3325; border-radius: 20px; font-size: 11px; font-weight: 600; color: #4a6353; transition: all 0.3s;">Step 2</span>
+      <span id="nevStep1" style="padding: 4px 14px; background: #142d1f; border: 1px solid #2ecc71; border-radius: 20px; font-size: 11px; font-weight: 600; color: #2ecc71; transition: all 0.3s;">Chạy Auto</span>
     </div>
 
     <div id="nevDisplayBox" style="background: #060d09; border: 1px solid #12241a; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; color: #2ecc71; text-align: center; margin-bottom: 12px; min-height: 24px; letter-spacing: 0.5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
@@ -86,7 +100,7 @@ function createStatusBar() {
     </div>
 
     <div style="width: 100%; background: #0d1a12; height: 5px; border-radius: 10px; margin-bottom: 14px; overflow: hidden; border: 1px solid #12241a;">
-      <div id="nevProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.4s ease, box-shadow 0.4s ease; box-shadow: 0 0 6px #2ecc71;"></div>
+      <div id="nevProgressBar" style="width: 15%; height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); transition: width 0.4s ease, box-shadow 0.4s ease; box-shadow: 0 0 6px #2ecc71;"></div>
     </div>
 
     <div id="nevFooterBtn" style="background: linear-gradient(180deg, #142d1f, #0b1a12); border: 1px solid #2ecc71; border-radius: 10px; padding: 8px; font-size: 12px; font-weight: 700; color: #ffffff; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
@@ -113,8 +127,6 @@ function showStatus(text) {
 
     const displayBox = document.getElementById("nevDisplayBox");
     const footerBtn  = document.getElementById("nevFooterBtn");
-    const step1      = document.getElementById("nevStep1");
-    const step2      = document.getElementById("nevStep2");
     const pBar       = document.getElementById("nevProgressBar");
     const card       = document.getElementById("nevUiCard");
 
@@ -131,35 +143,12 @@ function showStatus(text) {
       let pct = Math.max(0, Math.min(100, (parseInt(seconds, 10) / 60) * 100));
       if (pBar) pBar.style.width = `${pct}%`;
       
-      footerBtn.textContent = "Có Mã - Tiến Hành Auto";
+      footerBtn.textContent = "Đang lấy mã...";
       footerBtn.style.borderColor = "#2ecc71";
       return;
     }
 
-    if (cleanText.toUpperCase().includes("STEP 1")) {
-      if (step1) {
-        step1.style.background = "#142d1f";
-        step1.style.borderColor = "#2ecc71";
-        step1.style.color = "#2ecc71";
-      }
-      if (step2) {
-        step2.style.background = "#0c1611";
-        step2.style.borderColor = "#1b3325";
-        step2.style.color = "#4a6353";
-      }
-      displayBox.textContent = "STEP 1";
-      if (pBar) pBar.style.width = "25%";
-    } 
-    else if (cleanText.toUpperCase().includes("STEP 2")) {
-      if (step2) {
-        step2.style.background = "#142d1f";
-        step2.style.borderColor = "#2ecc71";
-        step2.style.color = "#2ecc71";
-      }
-      displayBox.textContent = "STEP 2";
-      if (pBar) pBar.style.width = "65%";
-    } 
-    else if (cleanText.toUpperCase().includes("BYPASS")) {
+    if (cleanText.toUpperCase().includes("BYPASS")) {
       displayBox.textContent = "Bypass Captcha";
       if (pBar) pBar.style.width = "45%";
     }
@@ -182,7 +171,6 @@ function showStatus(text) {
   }, "showStatus");
 }
 
-/* Khởi tạo trạng thái ban đầu */
 if (location.hostname.includes("moneytask.top")) {
   showStatus("Hệ Thống Sẵn Sàng");
 } else {
@@ -282,7 +270,7 @@ function sendCampErrorWebhook() {
   if (location.hostname.includes("moneytask.top")) return;
 
   function randomDelay() {
-    const times = [5000, 6000, 7000];
+    const times = [4000, 5000, 6000];
     return times[Math.floor(Math.random() * times.length)];
   }
 
@@ -292,8 +280,10 @@ function sendCampErrorWebhook() {
   }
 
   function unlockButton() {
+    if (isUnlocking) return; 
     const element = document.getElementById("invisibleCaptchaShortlink");
     if (element && element.hasAttribute("disabled")) {
+      isUnlocking = true;
       const delay = randomDelay();
       showStatus("Đang bypass hcaptcha...");
       setTimeout(() => {
@@ -301,6 +291,7 @@ function sendCampErrorWebhook() {
         showStatus("Đã bypass hcaptcha");
         setTimeout(() => {
           clickContinueButton();
+          isUnlocking = false;
         }, 1200);
       }, delay);
     }
@@ -316,61 +307,10 @@ function sendCampErrorWebhook() {
         showStatus("Đã mở captcha → chuẩn bị tiếp tục");
         setTimeout(() => {
           showStatus("Đang sang bước tiếp");
-          btn.click();
+          simulateClick(btn);
         }, 1000);
       }
     });
-  }
-
-  function detectLinkGoc() {
-    safe(() => {
-      const buttons = document.querySelectorAll("a, button");
-      buttons.forEach(btn => {
-        if (btn.offsetParent === null) return;
-        if (btn.offsetWidth < 1 || btn.offsetHeight < 1) return;
-
-        const text = (btn.innerText || "").trim().toUpperCase();
-
-        if (text.includes("BẤM VÀO ĐÂY ĐỂ TIẾP TỤC") && !nevClickedContinue) {
-          const href = btn.getAttribute("href");
-          if (!href || href === "#" || href.includes("javascript")) return;
-          nevClickedContinue = true;
-          showStatus("Continue step");
-          setTimeout(() => { btn.click(); }, 1800);
-        }
-
-        if (text.includes("LINK GỐC") && !nevClickedLinkGoc) {
-          if (!btn.href || btn.href === "#") return;
-          nevClickedLinkGoc = true;
-          showStatus("Đã tìm thấy Link Gốc");
-          setTimeout(() => { btn.click(); }, 1500);
-        }
-      });
-    }, "detectLinkGoc");
-  }
-
-  function checkLinkGocOrReturn() {
-    safe(() => {
-      setTimeout(() => {
-        let foundLinkGoc  = false;
-        let foundContinue = false;
-
-        document.querySelectorAll("a, button").forEach(el => {
-          const text = (el.innerText || "").toUpperCase();
-          if (text.includes("LINK GỐC")) foundLinkGoc = true;
-          if (text.includes("BẤM VÀO ĐÂY ĐỂ TIẾP TỤC")) foundContinue = true;
-        });
-
-        if (foundContinue) return;
-
-        if (!foundLinkGoc) {
-          showStatus("Không có Link Gốc → về task");
-          setTimeout(() => {
-            location.href = "https://moneytask.top/app/tasks/link-rut-gon";
-          }, 1200);
-        }
-      }, 7000);
-    }, "checkLinkGocOrReturn");
   }
 
   function detectError404() {
@@ -419,14 +359,6 @@ function sendCampErrorWebhook() {
     safe(unlockButton, "unlockPoll");
   }, 1500);
 
-  // FIX STRICT: Chỉ chạy quét Link Gốc trên đúng miền hệ thống rút gọn, không chạy bừa bãi ở trang traffic
-  if (location.hostname.includes("uptolink.one")) {
-    setInterval(() => {
-      safe(detectLinkGoc, "linkGocPoll");
-    }, 1200);
-    checkLinkGocOrReturn();
-  }
-
 })();
 
 /* ================================================= */
@@ -437,36 +369,6 @@ function sendCampErrorWebhook() {
   "use strict";
 
   if (location.hostname.includes("moneytask.top")) return;
-
-  const MAP_URL =
-    "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/redirectMap.json?" +
-    Date.now();
-
-  function handleGoogleRedirect() {
-    safe(() => {
-      const params = new URLSearchParams(window.location.search);
-      const target = params.get("q");
-      if (target) {
-        try {
-          const domain = new URL(target).hostname;
-          showStatus("Đã tìm thấy trang: " + domain);
-        } catch {
-          showStatus("Redirect…");
-        }
-        setTimeout(() => { location.href = target; }, 400);
-      }
-    }, "googleRedirect");
-  }
-
-  async function loadMap() {
-    try {
-      const res = await fetch(MAP_URL, { cache: "no-store" });
-      return await res.json();
-    } catch (e) {
-      console.warn("[Nev] map load error", e);
-      return null;
-    }
-  }
 
   const _clickedEls = new WeakSet();
 
@@ -479,14 +381,7 @@ function sendCampErrorWebhook() {
     _clickedEls.add(el);
     setTimeout(() => { _clickedEls.delete(el); }, 3000);
 
-    try {
-      el.click();
-      el.dispatchEvent(new MouseEvent("click",       { bubbles: true }));
-      el.dispatchEvent(new PointerEvent("pointerdown",{ bubbles: true }));
-      el.dispatchEvent(new PointerEvent("pointerup",  { bubbles: true }));
-    } catch (e) {
-      console.warn("[Nev] click fail", e);
-    }
+    simulateClick(el);
   }
 
   function autoScrollPage() {
@@ -517,12 +412,13 @@ function sendCampErrorWebhook() {
         const text = (el.innerText || el.value || "").trim().toUpperCase();
         if (!text) return;
 
-        // FIX FIX: Mở rộng bộ lọc click cho toàn bộ từ khóa lấy mã giao diện Traffic Việt Nam
+        // Quét các nút lấy mã chuẩn
         if (
           text.includes("STEP 1") ||
           text.includes("STEP 2") ||
           text.includes("STEP 3") ||
           text.includes("LẤY MÃ") ||
+          text.includes("LẤY PASS") ||
           text.includes("VƯỢT MÃ") ||
           text.includes("CLICK ĐỂ TIẾP TỤC") ||
           text.includes("NHẤN ĐỂ TIẾP TỤC")
@@ -530,21 +426,42 @@ function sendCampErrorWebhook() {
           if (_stepClicked[text] && (now - _stepClicked[text]) < 4000) return;
           _stepClicked[text] = now;
 
-          showStatus(text.includes("STEP 2") ? "STEP 2" : "STEP 1");
+          showStatus("Click nút tiến trình...");
           nevScanTime = 0;
           el.scrollIntoView({ block: "center" });
           safeClick(el);
         }
 
+        // CHỨC NĂNG MỚI: Xử lý thông báo "Nhấn link bất kỳ"
         if (
           text.includes("NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC") ||
-          text.includes("NHẤN LINK BẤT KỲ ĐẾ TIẾP TỤC")
+          text.includes("NHẤN LINK BẤT KỲ ĐẾ TIẾP TỤC") ||
+          text.includes("CLICK 1 BÀI VIẾT BẤT KỲ")
         ) {
-          if (!window.__nevReload) {
-            window.__nevReload = true;
-            showStatus("Reload page để sang step kế");
+          const bodyText = (document.body.innerText || "").toUpperCase();
+          // Chặn click/reload nếu bộ đếm giây đang chạy
+          if (bodyText.includes("VUI LÒNG ĐỢI TRONG") || bodyText.includes("GIÂY")) return;
+
+          if (!window.__nevLinkClick) {
+            window.__nevLinkClick = true;
+            showStatus("Đang click bài viết ngẫu nhiên...");
             nevScanTime = 0;
-            setTimeout(() => { location.href = location.href; }, 800);
+            
+            // Tìm và click vào 1 link bài viết nội bộ ngẫu nhiên
+            const internalLinks = Array.from(document.querySelectorAll("a")).filter(a => {
+                return a.href && 
+                       a.href.includes(location.hostname) && 
+                       !a.href.includes("javascript:") && 
+                       !a.href.includes("#");
+            });
+
+            if (internalLinks.length > 0) {
+                const randomLink = internalLinks[Math.floor(Math.random() * internalLinks.length)];
+                setTimeout(() => { safeClick(randomLink); }, 1000);
+            } else {
+                // Fallback nếu không có link, tiến hành reload nhẹ
+                setTimeout(() => { location.href = location.href; }, 1200);
+            }
           }
         }
       });
@@ -574,7 +491,7 @@ function sendCampErrorWebhook() {
 
         lastCountdown = sec;
         showStatus("Đợi lấy mã: " + sec + "s");
-        nevScanTime = 0;
+        nevScanTime = 0; // Reset failsafe timer trong lúc chờ
 
         const absoluteTop = rect.top + window.pageYOffset;
         window.scrollTo({ top: absoluteTop - 120, behavior: "smooth" });
@@ -584,8 +501,6 @@ function sendCampErrorWebhook() {
   }
 
   function startAuto() {
-    const reloadKey = "reloadCount";
-
     autoScrollPage();
     clickButtons();
     focusWaitingText();
@@ -595,46 +510,16 @@ function sendCampErrorWebhook() {
     }, 1500);
 
     setInterval(() => {
-      safe(() => {
-        const body = (document.body.innerText || "").toUpperCase();
-        if (
-          body.includes("NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC") ||
-          body.includes("NHẤN LINK BẤT KỲ ĐẾ TIẾP TỤC")
-        ) {
-          let c = parseInt(sessionStorage.getItem(reloadKey) || "0", 10);
-          if (c < 2) {
-            sessionStorage.setItem(reloadKey, String(c + 1));
-            showStatus("Reloading page");
-            nevScanTime = 0;
-            location.href = location.href;
-          }
-        }
-      }, "reloadDetect");
-    }, 1500);
-
-    setInterval(() => {
       safe(focusWaitingText, "countdownLoop");
     }, 400);
   }
 
   if (location.hostname.includes("google.com") && location.pathname === "/url") {
-    setTimeout(handleGoogleRedirect, 800);
-  }
-
-  const config = await loadMap();
-
-  if (config && config.enabled) {
-    const map  = config.redirects;
-    const path = location.pathname.split("/").filter(Boolean)[0];
-
-    if (path && map[path]) {
-      const target = map[path];
-      setTimeout(() => {
-        location.href =
-          "https://www.google.com/url?q=" + encodeURIComponent("https://" + target);
-      }, 1200);
-      return;
-    }
+    setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        const target = params.get("q");
+        if (target) location.href = target;
+    }, 800);
   }
 
   setTimeout(() => {
@@ -679,7 +564,6 @@ function sendCampErrorWebhook() {
           radiusX: 2, radiusY: 2
         });
       } catch (e) {
-        console.warn("[Nev] Touch not supported:", e);
         showStatus("Touch không được hỗ trợ");
         verifyDone = false;
         return;
@@ -743,9 +627,9 @@ setInterval(() => {
     if (!nevScanTime) return;
     if (location.hostname.includes("moneytask.top")) return;
 
-    // Tăng thời gian tối đa chờ đợi lên 25 giây để tránh lỗi tải trang chậm bị văng về
-    if (Date.now() - nevScanTime > 25000) {
-      showStatus("Không mã → quay về task");
+    // Tăng thời gian chờ an toàn lên 35 giây để tránh lỗi kẹt load trang web chậm
+    if (Date.now() - nevScanTime > 35000) {
+      showStatus("Không lấy được mã → về task");
       sendErrorWebhook();
       nevScanTime = 0;
       setTimeout(() => {
