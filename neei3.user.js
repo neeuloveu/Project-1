@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Neei Tool (Neon Green UI Edition)
-// @namespace    https://tampermonkey.net/
+// @namespace    https://github.com/catdzs1vn
 // @version      1.3
 // @description  Auto Link cho maxtask.net & kiemmoney.com — Giao diện Neon Green cố định tinh gọn
 // @author       @catdzs1vn
@@ -19,8 +19,8 @@
 (function () {
     'use strict';
 
-    if (window._catbellLoaded) return;
-    window._catbellLoaded = true;
+    if (window._neeitoolLoaded) return;
+    window._neeitoolLoaded = true;
 
     // ─── Global Config ────────────────────────────────────────────────────────
     const STATUS_ICON = "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/IMG_1198.jpeg";
@@ -38,135 +38,133 @@
         remove: function (key) { GM_setValue(key, undefined); }
     };
 
-    // ─── CSS — GIAO DIỆN NEON GREEN HIỆN ĐẠI (CỐ ĐỊNH, KHÔNG ĐÓNG MỞ) ──────────
+    // ─── CSS — GIAO DIỆN NEEITOOL NEON TINH GỌN CHUYÊN NGHIỆP ──────────────────
     GM_addStyle(`
         #cb-widget {
             position: fixed; bottom: 20px; right: 20px;
             z-index: 2147483647;
-            display: flex; flexDirection: column;
-            width: 260px; padding: 16px;
-            background: linear-gradient(145deg, #09130e, #050a07);
-            color: #ffffff; borderRadius: 20px;
+            display: flex; flex-direction: column;
+            width: 245px; padding: 14px;
+            background: linear-gradient(145deg, #070f0b, #030705);
+            color: #ffffff; borderRadius: 16px;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(46, 204, 113, 0.15);
-            border: 2px solid #1e4620;
-            backdrop-filter: blur(12px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid #1c3d1e;
+            backdrop-filter: blur(16px);
             box-sizing: border-box;
             user-select: none;
         }
-        #cb-drag {
-            cursor: grab; margin-bottom: 12px;
-        }
+        #cb-drag { cursor: grab; margin-bottom: 10px; }
         #cb-drag:active { cursor: grabbing; }
         .cb-body { display: flex; flex-direction: column; width: 100%; }
         
         .cb-toggleRow {
             display: flex; align-items: center; justify-content: space-between;
-            background: #060d09; border: 1px solid #12241a;
-            border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+            background: #040906; border: 1px solid #0f1f15;
+            border-radius: 10px; padding: 8px 10px; margin-bottom: 10px;
             transition: border-color .3s, background .3s;
         }
-        .cb-toggleRow.on { border-color: #2ecc71; background: #0c1611; }
-        .cb-tleft { display: flex; align-items: center; gap: 10px; }
+        .cb-toggleRow.on { border-color: #2ecc71; background: #08120b; }
+        .cb-tleft { display: flex; align-items: center; gap: 8px; }
         .cb-dot {
             width: 6px; height: 6px; border-radius: 50%;
-            background: #4a6353; flex-shrink: 0; transition: all .3s;
+            background: #3d5245; flex-shrink: 0; transition: all .3s;
         }
         .cb-dot.on { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
-        .cb-rlbl { font-size: 13px; font-weight: 700; color: #ffffff; line-height: 1; }
-        .cb-statusSub { font-size: 10px; color: #6a7c71; margin-top: 3px; transition: color .3s; line-height: 1; }
+        .cb-rlbl { font-size: 12px; font-weight: 700; color: #ffffff; line-height: 1; }
+        .cb-statusSub { font-size: 10px; color: #5c6e62; margin-top: 3px; transition: color .3s; line-height: 1; }
         .cb-statusSub.on { color: #2ecc71; font-weight: 600; }
         
-        .cb-switch { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+        .cb-switch { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
         .cb-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
         .cb-slider {
-            position: absolute; inset: 0; background: #0d1a12;
-            border-radius: 50px; cursor: pointer; border: 1px solid #12241a;
+            position: absolute; inset: 0; background: #0a140e;
+            border-radius: 50px; cursor: pointer; border: 1px solid #0f1f15;
             transition: all .3s ease;
         }
         .cb-slider::before {
             content: ''; position: absolute;
-            width: 14px; height: 14px; left: 2px; top: 2px;
-            background: #4a6353; border-radius: 50%;
+            width: 12px; height: 12px; left: 2px; top: 2px;
+            background: #3d5245; border-radius: 50%;
             transition: all .3s ease;
         }
-        .cb-switch input:checked + .cb-slider { background: #142d1f; border-color: #2ecc71; }
+        .cb-switch input:checked + .cb-slider { background: #0f2418; border-color: #2ecc71; }
         .cb-switch input:checked + .cb-slider::before {
-            transform: translateX(18px); background: #2ecc71; box-shadow: 0 0 6px #2ecc71;
+            transform: translateX(16px); background: #2ecc71; box-shadow: 0 0 6px #2ecc71;
         }
         
         .cb-task-box {
-            background: #060d09; border: 1px solid #12241a;
-            border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+            background: #040906; border: 1px solid #0f1f15;
+            border-radius: 10px; padding: 8px 10px; margin-bottom: 10px;
         }
-        .cb-task-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .cb-task-lbl { font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600; }
+        .cb-task-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .cb-task-lbl { font-size: 9px; color: #5c6e62; text-transform: uppercase; font-weight: 600; }
         .cb-task-name {
             font-size: 11px; font-weight: 700; color: #2ecc71;
-            max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .cb-task-name.idle { color: #4a6353; font-weight: 400; font-style: italic; }
-        .cb-step-list { display: flex; gap: 6px; }
+        .cb-task-name.idle { color: #3d5245; font-weight: 400; font-style: italic; }
+        .cb-step-list { display: flex; gap: 5px; }
         .cb-step {
-            font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
-            background: #0c1611; border: 1px solid #1b3325; color: #4a6353; transition: all .3s;
+            font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+            background: #08120b; border: 1px solid #16291e; color: #3d5245; transition: all .3s;
         }
-        .cb-step.active { background: #142d1f; border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.2); }
-        .cb-step.done { background: #0c1611; color: #27ae60; border-color: #27ae60; text-decoration: line-through; opacity: 0.6; }
+        .cb-step.active { background: #0f2418; border-color: #2ecc71; color: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.15); }
+        .cb-step.done { background: #08120b; color: #27ae60; border-color: #27ae60; text-decoration: line-through; opacity: 0.5; }
         
         #cb-countdown-box {
             display: none; opacity: 0; flex-direction: column;
-            background: #060d09; border: 1px solid #12241a;
-            border-radius: 12px; padding: 12px; margin-bottom: 12px; transition: opacity .3s;
+            background: #040906; border: 1px solid #0f1f15;
+            border-radius: 10px; padding: 10px; margin-bottom: 10px; transition: opacity .3s;
         }
         #cb-countdown-box.show { display: flex; opacity: 1; }
         .cb-cd-right { width: 100%; }
-        .cb-cd-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .cb-cd-label { font-size: 10px; color: #6a7c71; font-weight: 600; letter-spacing: 0.5px; }
-        .cb-cd-text { font-size: 18px; font-weight: 800; color: #2ecc71; }
-        .cb-cd-bar-wrap { height: 5px; background: #0d1a12; border-radius: 10px; overflow: hidden; width: 100%; border: 1px solid #12241a; }
-        .cb-cd-bar { height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); border-radius: 10px; transition: width 1s linear; width: 100%; box-shadow: 0 0 6px #2ecc71; }
+        .cb-cd-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+        .cb-cd-label { font-size: 9px; color: #5c6e62; font-weight: 600; letter-spacing: 0.5px; }
+        .cb-cd-text { font-size: 16px; font-weight: 800; color: #2ecc71; }
+        .cb-cd-bar-wrap { height: 4px; background: #0a140e; border-radius: 10px; overflow: hidden; width: 100%; border: 1px solid #0f1f15; }
+        .cb-cd-bar { height: 100%; background: linear-gradient(90deg, #2ecc71, #27ae60); border-radius: 10px; transition: width 1s linear; width: 100%; box-shadow: 0 0 5px #2ecc71; }
         
-        #cb-redirect-box { display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        #cb-redirect-box { display: none; flex-direction: column; gap: 6px; margin-bottom: 10px; }
         #cb-redirect-box.show { display: flex; }
         .cb-redirect-label {
-            font-size: 11px; color: #ffffffb3; background: #060d09; border: 1px solid #e74c3c;
-            border-radius: 12px; padding: 10px; line-height: 1.4;
+            font-size: 10px; color: #ffffffb3; background: #040906; border: 1px solid #c0392b;
+            border-radius: 10px; padding: 8px; line-height: 1.3;
         }
-        .cb-redirect-label .cb-rd-title { font-size: 12px; font-weight: 800; color: #e74c3c; margin-bottom: 4px; display: block; }
-        .cb-redirect-label .cb-rd-sub { font-size: 10px; color: #6a7c71; display: block; }
-        .cb-redirect-btns { display: flex; gap: 8px; }
+        .cb-redirect-label .cb-rd-title { font-size: 11px; font-weight: 800; color: #e74c3c; margin-bottom: 3px; display: block; }
+        .cb-redirect-label .cb-rd-sub { font-size: 9px; color: #5c6e62; display: block; }
+        .cb-redirect-btns { display: flex; gap: 6px; }
         .cb-redir-btn {
-            flex: 1; padding: 10px 6px; border-radius: 10px; cursor: pointer;
-            font-size: 11px; font-weight: 700; transition: all .2s;
-            text-align: center; border: 1px solid #1e4620; line-height: 1.2;
+            flex: 1; padding: 8px 4px; border-radius: 8px; cursor: pointer;
+            font-size: 10px; font-weight: 700; transition: all .2s;
+            text-align: center; border: 1px solid #143016; line-height: 1.2;
         }
-        .cb-redir-btn .cb-btn-label { font-size: 9px; font-weight: 500; opacity: 0.5; display: block; margin-top: 2px; }
-        .cb-redir-btn.maxtask { background: linear-gradient(180deg, #142d1f, #0b1a12); color: #2ecc71; border-color: #2ecc71; }
-        .cb-redir-btn.kiemoney { background: linear-gradient(180deg, #1f2d14, #121a0b); color: #a2ec71; border-color: #a2ec71; }
-        .cb-redir-btn:active { transform: scale(0.95); }
+        .cb-redir-btn .cb-btn-label { font-size: 8px; font-weight: 500; opacity: 0.4; display: block; margin-top: 1px; }
+        .cb-redir-btn.maxtask { background: linear-gradient(180deg, #0f2418, #08120b); color: #2ecc71; border-color: #2ecc71; }
+        .cb-redir-btn.kiemoney { background: linear-gradient(180deg, #16240f, #0b1208); color: #a2ec71; border-color: #a2ec71; }
+        .cb-redir-btn:active { transform: scale(0.96); }
         
-        .cb-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid #12241a; }
-        .cb-author { font-size: 11px; color: #6a7c71; font-weight: 600; text-transform: uppercase; }
+        .cb-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #0f1f15; }
+        .cb-author { font-size: 10px; color: #5c6e62; font-weight: 600; text-transform: uppercase; }
         .cb-phase {
-            font-size: 11px; font-weight: 700; color: #ffffff; background: linear-gradient(180deg, #142d1f, #0b1a12);
-            border: 1px solid #2ecc71; padding: 4px 10px; border-radius: 10px; transition: all .3s;
+            font-size: 10px; font-weight: 700; color: #ffffff; background: linear-gradient(180deg, #0f2418, #08120b);
+            border: 1px solid #2ecc71; padding: 3px 8px; border-radius: 8px; transition: all .3s;
         }
-        .cb-phase.running { color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.3); }
+        .cb-phase.running { color: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.25); }
     `);
 
-    // ─── Inject Widget HTML (Cấu trúc Neon nguyên bản, không dùng Panel ẩn) ───
+    // ─── Inject Widget HTML (Cấu trúc tinh gọn chuẩn Neei Tool) ───────────────
     function injectWidget() {
         if (el('cb-widget')) return;
         var widget = document.createElement('div');
         widget.id = 'cb-widget';
         widget.innerHTML = `
             <div id="cb-drag">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <img src="${STATUS_ICON}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.4);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <img src="${STATUS_ICON}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.3);">
                   <div style="display: flex; flex-direction: column;">
-                    <span style="font-weight: 700; font-size: 15px; color: #2ecc71; letter-spacing: 0.5px;">UptoTool</span>
-                    <span style="font-size: 10px; color: #6a7c71; text-transform: uppercase; font-weight: 600;">System CatBell v1.3</span>
+                    <span style="font-weight: 800; font-size: 14px; color: #2ecc71; letter-spacing: 0.5px;">Neei Tool</span>
+                    <span style="font-size: 9px; color: #5c6e62; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px;">Premium Auto v1.3</span>
                   </div>
                 </div>
             </div>
@@ -219,46 +217,40 @@
                     </div>
                 </div>
                 <div class="cb-footer">
-                    <div class="cb-author">Tiến Hành Auto</div>
+                    <div class="cb-author">Neei Engine</div>
                     <div class="cb-phase" id="cb-phase">Idle</div>
                 </div>
             </div>
         `;
         document.body.appendChild(widget);
 
-        // Kích hoạt tính năng kéo thả Widget di động trên màn hình
         setupDrag(widget);
 
-        // Khôi phục trạng thái bật/tắt từ bộ nhớ máy
+        // Bắt sự kiện change trực tiếp cho Toggle Switch để tránh trùng click nhầm
+        var togInput = el('cb-tog');
+        if (togInput) {
+            togInput.addEventListener('change', function() {
+                var on = this.checked;
+                storage.set({ catbell_active: on });
+                catbell19(on);
+                if (on) catbell32();
+            });
+        }
+
         storage.get('catbell_active', function (d) {
             catbell19(!!d.catbell_active);
             if (!!d.catbell_active) catbell32();
         });
     }
 
-    // ─── Event Delegation trên Document ───────────────────────────────────────
+    // ─── Event Delegation trên Document (Bỏ check switch lỗi) ─────────────────
     document.addEventListener('click', function (e) {
         var t = e.target;
-
-        // Xử lý sự kiện click nút gạt Bật/Tắt Auto Link
-        if (t.id === 'cb-tog' || (t.closest && t.closest('.cb-switch') && el('cb-tog'))) {
-            var tog = el('cb-tog');
-            if (!tog) return;
-            setTimeout(function () {
-                var on = tog.checked;
-                storage.set({ catbell_active: on });
-                catbell19(on);
-                if (on) catbell32();
-            }, 0);
-            return;
-        }
-
-        // Điều hướng nhanh khi nhấn nút Maxtask / Kiemmoney
         if (t.closest && t.closest('#cb-goto-maxtask')) { window.location.href = 'https://maxtask.net/home/tasks'; return; }
         if (t.closest && t.closest('#cb-goto-kiemoney')) { window.location.href = 'https://kiemmoney.com'; return; }
     });
 
-    // ─── Drag (Giữ nguyên logic kéo thả mượt mà trên PC và Mobile) ───────────
+    // ─── Drag (Kéo thả Widget mượt mà trên PC và Mobile) ──────────────────────
     function setupDrag(widget) {
         var drag = el('cb-drag');
         if (!drag) return;
@@ -293,7 +285,7 @@
         document.addEventListener('touchend', function () { dragging = false; });
     }
 
-    // ─── Countdown Watcher (Giữ nguyên gốc) ──────────────────────────────────
+    // ─── Countdown Watcher ────────────────────────────────────────────────────
     var _cd_max = 0, _cd_cur = 0, _cd_timer = null;
 
     function detectCountdown() {
@@ -352,7 +344,7 @@
     function startCountdownWatcher() { if (!_cd_timer) _cd_timer = setInterval(detectCountdown, 800); }
     function stopCountdownWatcher()  { if (_cd_timer) { clearInterval(_cd_timer); _cd_timer = null; } hideCountdown(); }
 
-    // ─── UI State Helpers (Giữ nguyên gốc) ────────────────────────────────────
+    // ─── UI State Helpers ─────────────────────────────────────────────────────
     function isOn() { var t = el('cb-tog'); return t ? t.checked : false; }
 
     function setStep(n, state) {
@@ -387,7 +379,6 @@
         }
     }
 
-    // ĐÃ KHỬ LỆNH ĐÓNG/MỞ: Chỉ cập nhật text lỗi, không gọi panel.classList
     function showRedirect(title, sub) {
         var box = el('cb-redirect-box'), t = el('cb-rd-title'), s = el('cb-rd-sub');
         if (t) t.textContent = title || '⚠️ Không thể tiếp tục';
@@ -395,7 +386,7 @@
         if (box) box.classList.add('show');
     }
 
-    // ─── Core Logic Task (Giữ nguyên 100% không chỉnh sửa) ───────────────────
+    // ─── Core Logic Task ──────────────────────────────────────────────────────
     function handleCanvas() {
         var canvas = document.querySelector('canvas'); if (!canvas) return false;
         setPhase('Xác thực...', true);
@@ -425,7 +416,7 @@
 
     function clickContinue() {
         var body = document.body.innerText;
-        if (body.includes('NHẤN LINK BẤT KỲ')) { setPhase('Reload...', true); window.location.href = window.location.href; return true; }
+        if (body.includes('NHẤN LINK BẤT KỲ')) { setPhase('Reload...', true); window.location.reload(); return true; }
         var els = document.querySelectorAll('*');
         for (var i = 0; i < els.length; i++) {
             var e2 = els[i];
@@ -470,9 +461,8 @@
         return false;
     }
 
-    // Đã thay text hiển thị tiến trình sang dạng UptoTool đồng bộ với UI mới
     function waitStep(n, cb) {
-        setStep(n, 'active'); setTask('Uptolink — Step ' + n); setPhase('Step ' + n, true);
+        setStep(n, 'active'); setTask('Neei — Step ' + n); setPhase('Step ' + n, true);
         var t = setInterval(function () {
             if (!isOn()) { clearInterval(t); return; }
             if (clickStep(n)) { clearInterval(t); cb(); }
@@ -547,8 +537,6 @@
         return false;
     }
 
-    var pageUrl = window.location.href;
-
     function runLogic() {
         if (!isOn()) return;
         if (document.readyState !== 'complete') {
@@ -559,24 +547,31 @@
         if (check404()) return;
 
         var body = document.body.innerText;
-        if (document.querySelector('canvas')) { handleCanvas(); return; }
+        var curUrl = window.location.href;
+
+        // Giới hạn xử lý canvas chỉ kích hoạt trên trang shortlink/uptolink, tránh lỗi tràn sang web khác
+        if (document.querySelector('canvas') && (curUrl.includes('uptolink') || curUrl.includes('huongdangetlink'))) { 
+            handleCanvas(); 
+            return; 
+        }
+
         if (body.includes('Quay về Nhiệm vụ')) { setTimeout(function(){ window.location.href='https://maxtask.net/home/tasks'; }, 1000); return; }
-        if (pageUrl.includes('maxtask.net/home/tasks')) { setPhase('Tìm nhiệm vụ...', true); startUptolink(); return; }
-        if (pageUrl.includes('maxtask.net/task/') || pageUrl.includes('kiemmoney.com/rewards/')) return;
+        if (curUrl.includes('maxtask.net/home/tasks')) { setPhase('Tìm nhiệm vụ...', true); startUptolink(); return; }
+        if (curUrl.includes('maxtask.net/task/') || curUrl.includes('kiemmoney.com/rewards/')) return;
         if (findTaskLink()) return;
 
         if (body.includes('Bấm vào đây để tiếp tục') || el('invisibleCaptchaShortlink')) {
             setPhase('Captcha...', true); waitCaptcha();
         } else if (body.includes('NHẤN LINK BẤT KỲ') || body.includes('NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC')) {
-            setPhase('Reload...', true); window.location.href = window.location.href;
+            setPhase('Reload...', true); window.location.reload();
         } else if (hasContinueBtn(body)) {
-            waitContinue(null, function(){ window.location.href = pageUrl; });
+            waitContinue(null, function(){ window.location.reload(); });
         } else if (body.includes('LẤY MÃ STEP 3')) {
-            waitStep(3, function(){ waitContinue(3, function(){ window.location.href = pageUrl; }); });
+            waitStep(3, function(){ waitContinue(3, function(){ window.location.reload(); }); });
         } else if (body.includes('LẤY MÃ STEP 2')) {
-            waitStep(2, function(){ waitContinue(2, function(){ window.location.href = pageUrl; }); });
+            waitStep(2, function(){ waitContinue(2, function(){ window.location.reload(); }); });
         } else if (body.includes('LẤY MÃ STEP 1') || body.includes('LẤY MÃ')) {
-            waitStep(1, function(){ waitContinue(1, function(){ window.location.href = pageUrl; }); });
+            waitStep(1, function(){ waitContinue(1, function(){ window.location.reload(); }); });
         } else if (body.includes('ĐANG XỬ LÝ') || body.includes('ĐANG XỬ LY') || body.includes('đang xử lý')) {
             setPhase('Đang xử lý...', true); setTimeout(runLogic, 1000);
         } else {
