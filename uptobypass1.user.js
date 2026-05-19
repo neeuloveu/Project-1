@@ -388,8 +388,6 @@ function updateBadge() {
 
 /* ═══════════════════════════════════════════════════════════
    DISCORD WEBHOOKS
-   (FIX: moved to global scope — both Script 1 and Script 3
-    need these; they were trapped inside Script 2's IIFE before)
    ═══════════════════════════════════════════════════════════ */
 
 function saveCounter() { localStorage.setItem("nev_success", String(successTask)); }
@@ -486,9 +484,6 @@ function sendCampErrorWebhook() {
     window.focus();
   }
 
-  /* ── unlock captcha button ──
-     FIX: original had broken nested comment /*function ... /* → entire
-     function was dead code. Now restored as a normal function.          */
   function unlockButton() {
     const el = document.getElementById("invisibleCaptchaShortlink");
     if (el && el.hasAttribute("disabled")) {
@@ -512,14 +507,9 @@ function sendCampErrorWebhook() {
     });
   }
 
-  /* ── detect link gốc ──
-     FIX: was defined INSIDE this IIFE but also called from global scope
-     (lines 411-417 in original) → ReferenceError. Duplicate global calls
-     removed. These functions now live and run only inside Script 1.      */
   function detectLinkGoc() {
     safe(() => {
       document.querySelectorAll("a,button").forEach(btn => {
-        /* visibility guard */
         if (btn.offsetParent === null) return;
         if (btn.offsetWidth < 1 || btn.offsetHeight < 1) return;
         const text = (btn.innerText || "").trim().toUpperCase();
@@ -560,10 +550,6 @@ function sendCampErrorWebhook() {
     }, "checkLinkGocOrReturn");
   }
 
-  /* ── error detectors ──
-     FIX: sendErrorWebhook / sendCampErrorWebhook were inside Script 2's
-     IIFE in the original → ReferenceError when called here.
-     Now both are in global scope above.                                   */
   function detectError404() {
     const body = (document.body.innerText || "").toUpperCase();
     if (document.title.includes("404") || body.includes("NOT FOUND") || body.includes("KHÔNG TÌM THẤY")) {
@@ -586,18 +572,13 @@ function sendCampErrorWebhook() {
     return false;
   }
 
-  /* ── start ── */
   setTimeout(simulateHuman, 1500);
 
   setInterval(() => { safe(() => { detectError404(); detectCampError(); }, "errPoll"); }, 2000);
   setInterval(() => { safe(unlockButton, "unlockPoll"); }, 1500);
 
-  /* uptolink finish page */
   const isUptoFinish = location.hostname === "uptolink.one" && location.pathname.startsWith("/finish");
 
-  /* FIX: original ran BOTH the uptolink block AND the global detectLinkGoc
-     below it (lines 411-417) → duplicate intervals on every page.
-     Now: only ONE branch runs, never both.                                 */
   if (isUptoFinish) {
     setInterval(() => { safe(detectLinkGoc, "linkGocUptoLink"); }, 1200);
     checkLinkGocOrReturn();
@@ -615,13 +596,10 @@ function sendCampErrorWebhook() {
 (async function script2() {
   "use strict";
 
-  /* FIX: original was missing "?" separator before Date.now() →
-     URL became "…redirectMap.json1234567890" → fetch 404           */
   const MAP_URL =
     "https://raw.githubusercontent.com/neeuloveu/Project-1/refs/heads/main/redirectMap.json?" +
     Date.now();
 
-  /* google redirect */
   function handleGoogleRedirect() {
     safe(() => {
       const target = new URLSearchParams(window.location.search).get("q");
@@ -632,7 +610,6 @@ function sendCampErrorWebhook() {
     }, "googleRedirect");
   }
 
-  /* load json map */
   async function loadMap() {
     try {
       const r = await fetch(MAP_URL, { cache: "no-store" });
@@ -643,8 +620,6 @@ function sendCampErrorWebhook() {
     }
   }
 
-  /* ── safe click: visibility + WeakSet cooldown ──
-     FIX: original safeClick had no duplicate-click guard → spam clicks   */
   const _clicked = new WeakSet();
   function safeClick(el) {
     if (!el) return;
@@ -652,7 +627,7 @@ function sendCampErrorWebhook() {
     if (el.offsetParent === null) return;
     if (el.offsetWidth < 1 || el.offsetHeight < 1) return;
     _clicked.add(el);
-    setTimeout(() => _clicked.delete(el), 3000);   // 3s cooldown
+    setTimeout(() => _clicked.delete(el), 3000);
     try {
       el.click();
       el.dispatchEvent(new MouseEvent("click",        { bubbles: true }));
@@ -661,7 +636,6 @@ function sendCampErrorWebhook() {
     } catch (e) { console.warn("[Nev] click fail", e); }
   }
 
-  /* fast scroll */
   function autoScrollPage() {
     if (location.hostname.includes("maxtask.net") || location.hostname.includes("uptolink.one")) return;
     if (window.__nevScrolled) return;
@@ -671,20 +645,20 @@ function sendCampErrorWebhook() {
     nevScanTime = Date.now();
   }
 
-  /* ── click steps / continue ──
-     FIX: original had no per-button cooldown → same button clicked every
-     1.5s. Added _stepTs map with 4s cooldown per button text.             */
   const _stepTs = {};
   function clickButtons() {
     safe(() => {
       const now = Date.now();
       document.querySelectorAll("a,button,.btn,div,span").forEach(el => {
+        
+        // BỎ QUA GIAO DIỆN CỦA TOOL ĐỂ TRÁNH TỰ CLICK VÀO CHÍNH NÓ
+        if (el.closest('#nevPanel')) return;
+
         if (el.offsetParent === null) return;
         if (el.offsetWidth < 4 || el.offsetHeight < 4) return;
         const text = (el.innerText || "").trim().toUpperCase();
         if (!text) return;
 
-        /* STEP 1 / 2 / 3 */
         if (text.includes("STEP 1") || text.includes("STEP 2") || text.includes("STEP 3")) {
           if (_stepTs[text] && now - _stepTs[text] < 4000) return;
           _stepTs[text] = now;
@@ -696,7 +670,6 @@ function sendCampErrorWebhook() {
           safeClick(el);
         }
 
-        /* NHẤN ĐỂ TIẾP TỤC */
         if (text.includes("NHẤN ĐỂ TIẾP TỤC")) {
           if (_stepTs["CTN"] && now - _stepTs["CTN"] < 5000) return;
           _stepTs["CTN"] = now;
@@ -706,7 +679,6 @@ function sendCampErrorWebhook() {
           setTimeout(() => safeClick(el), 2000);
         }
 
-        /* NHẤN LINK BẤT KỲ → reload */
         if (text.includes("NHẤN LINK BẤT KỲ ĐỂ TIẾP TỤC") || text.includes("NHẤN LINK BẤT KỲ ĐẾ TIẾP TỤC")) {
           if (!window.__nevReload) {
             window.__nevReload = true;
@@ -719,12 +691,15 @@ function sendCampErrorWebhook() {
     }, "clickButtons");
   }
 
-  /* ── countdown tracker + drives UI progress bar ── */
   let lastCountdown = null;
 
   function focusWaitingText() {
     safe(() => {
       for (const el of document.querySelectorAll("div,span,p")) {
+        
+        // BỎ QUA GIAO DIỆN CỦA TOOL ĐỂ TRÁNH QUÉT NHẦM SỐ TRÊN GIAO DIỆN
+        if (el.closest('#nevPanel')) continue;
+
         const raw  = (el.innerText || "").trim();
         const text = raw.toUpperCase();
         if (!text.includes("VUI LÒNG ĐỢI TRONG")) continue;
@@ -736,7 +711,7 @@ function sendCampErrorWebhook() {
         const sec = parseInt(m[0], 10);
         if (sec < 1 || sec > 80) continue;
         if (lastCountdown !== null && sec >= lastCountdown) continue;
-        /* record max for progress bar */
+        
         if (countdownMax === null || sec > countdownMax) countdownMax = sec;
         lastCountdown = sec;
         nevScanTime   = 0;
@@ -748,7 +723,6 @@ function sendCampErrorWebhook() {
     }, "focusWaitingText");
   }
 
-  /* ── start auto ── */
   function startAuto() {
     const reloadKey = "reloadCount";
     autoScrollPage();
@@ -774,17 +748,12 @@ function sendCampErrorWebhook() {
     }, 1500);
   }
 
-  /* ── google check ── */
   if (location.hostname.includes("google.com") && location.pathname === "/url") {
     setTimeout(handleGoogleRedirect, 800);
   }
 
-  /* ── redirect map ── */
   const config = await loadMap();
 
-  /* FIX: original "return" here when !config.enabled caused Script 3 and
-     the SCAN FAILSAFE to never run (they were nested inside this async IIFE
-     in the original). Now Script 3 is its own top-level IIFE below.        */
   if (config && config.enabled) {
     const path = location.pathname.split("/").filter(Boolean)[0];
     console.log("[Nev] key:", path);
@@ -802,16 +771,12 @@ function sendCampErrorWebhook() {
 
 /* ═══════════════════════════════════════════════════════════
    SCRIPT 3 — MAXTASK AUTO HOLD VERIFY
-   FIX: was nested inside Script 2's async IIFE in the original →
-   any early "return" in Script 2 (e.g. redirect map hit) silently
-   killed Script 3. Now it's a proper top-level IIFE.
    ═══════════════════════════════════════════════════════════ */
 
 (function script3() {
   "use strict";
 
   if (!location.hostname.includes("moneytask.top")) return;
-  /* FIX: original was "app/tasks/…" (no leading slash) → never matched */
   if (!location.pathname.startsWith("/app/tasks/link-rut-gon")) return;
 
   let verifyDone    = false;
@@ -828,7 +793,6 @@ function sendCampErrorWebhook() {
     setTimeout(() => {
       showStatus("Đang giữ xác minh... 6s");
 
-      /* drive countdown UI while holding */
       let holdSec = 6;
       setUICountdown(holdSec, 6);
       const tick = setInterval(() => {
@@ -894,7 +858,6 @@ function sendCampErrorWebhook() {
 
 /* ═══════════════════════════════════════════════════════════
    SCAN FAILSAFE — BACK HOME IF STUCK
-   FIX: nevScanTime reset BEFORE setTimeout to prevent double-redirect
    ═══════════════════════════════════════════════════════════ */
 
 setInterval(() => {
@@ -903,7 +866,7 @@ setInterval(() => {
     if (Date.now() - nevScanTime > 7000) {
       showStatus("Không mã → quay về task");
       sendErrorWebhook();
-      nevScanTime = 0;   // reset FIRST to avoid loop
+      nevScanTime = 0;
       setTimeout(() => { location.href = "https://moneytask.top/app/tasks/link-rut-gon"; }, 1200);
     }
   }, "failsafe");
