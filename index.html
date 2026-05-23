@@ -165,16 +165,30 @@ function buildJson() {
   return JSON.stringify({ enabled, redirects: Object.fromEntries(entries.map(e => [e.key, e.val])) }, null, 2);
 }
 
+let pushing = false;
+
 async function push(msg) {
   const token = getToken();
   if (!token) throw new Error('Cần token để lưu');
-  const res = await fetch(API, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: msg, content: toB64(buildJson()), sha, branch: BRANCH })
-  });
-  if (!res.ok) { const e = await res.json().catch(()=>{}); throw new Error((e && e.message) || 'GitHub ' + res.status); }
-  sha = (await res.json()).content?.sha || sha;
+  if (pushing) throw new Error('Đang lưu, vui lòng chờ…');
+  pushing = true;
+  try {
+    /* Luôn lấy SHA mới nhất trước khi push để tránh conflict */
+    const hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+    const metaRes = await fetch(API, { headers: hdr });
+    if (!metaRes.ok) throw new Error('Không lấy được SHA — kiểm tra token');
+    sha = (await metaRes.json()).sha;
+
+    const res = await fetch(API, {
+      method: 'PUT',
+      headers: { ...hdr, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, content: toB64(buildJson()), sha, branch: BRANCH })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>{}); throw new Error((e && e.message) || 'GitHub ' + res.status); }
+    sha = (await res.json()).content?.sha || sha;
+  } finally {
+    pushing = false;
+  }
 }
 
 /* ── enabled toggle ── */
