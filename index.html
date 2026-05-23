@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>redirectMap Editor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #e8e8f0; font-family: 'Courier New', monospace; padding: 20px 14px 80px; max-width: 700px; margin: 0 auto; }
+  h1 { color: #a59cf9; font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #6b6b88; font-size: 11px; margin-bottom: 22px; }
+  .card { background: #16161f; border: 1px solid #1e1e2e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .label { font-size: 10px; color: #6b6b88; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase; }
+  input, select { background: #1a1a26; border: 1px solid #1e1e2e; border-radius: 7px; color: #e8e8f0; padding: 9px 12px; font-size: 13px; font-family: inherit; width: 100%; outline: none; margin-bottom: 8px; }
+  input:focus { border-color: #7c6ef7; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { border: none; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 700; padding: 9px 16px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: opacity .15s; }
+  button:active { opacity: 0.65; }
+  .btn-p { background: #7c6ef7; }
+  .btn-g { background: #34c97a; }
+  .btn-r { background: #f05252; }
+  .btn-m { background: #3a3a4a; }
+  .btn-s { padding: 6px 11px; font-size: 11px; }
+  .entry { background: #16161f; border: 1px solid #1e1e2e; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .tag { background: #111118; border: 1px solid #1e1e2e; border-radius: 5px; padding: 3px 9px; font-size: 11px; color: #a59cf9; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .val { flex: 1; font-size: 11px; color: #6b6b88; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .actions { display: flex; gap: 5px; flex-shrink: 0; }
+  #toast { position: fixed; bottom: 20px; right: 14px; z-index: 999; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .toast-item { padding: 10px 16px; border-radius: 9px; font-size: 12px; font-weight: 700; color: #fff; max-width: 300px; animation: sin .2s ease; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+  @keyframes sin { from { opacity:0; transform:translateX(20px); } to { opacity:1; } }
+  .info { font-size: 10px; color: #6b6b88; margin-top: 8px; line-height: 1.5; }
+  .count { font-size: 11px; color: #6b6b88; margin-bottom: 10px; }
+  .edit-row { display: flex; gap: 6px; align-items: center; flex: 1; }
+  .edit-inp { background: #1a1a26; border: 1px solid #7c6ef7; border-radius: 6px; color: #e8e8f0; padding: 6px 10px; font-size: 12px; font-family: inherit; flex: 1; outline: none; margin: 0; width: auto; }
+  .enabled-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 8px; }
+  .on  { background: #1a3a2a; color: #34c97a; border: 1px solid #34c97a44; }
+  .off { background: #3a1a1a; color: #f05252; border: 1px solid #f0525244; }
+  .divider { border: none; border-top: 1px solid #1e1e2e; margin: 12px 0; }
+  #searchInput { margin-bottom: 8px; }
+  .loading { text-align: center; color: #6b6b88; padding: 30px; font-size: 13px; }
+  .toggle-enabled { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #3a3a4a; border-radius: 24px; transition: .3s; }
+  .slider:before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+  input:checked + .slider { background: #34c97a; }
+  input:checked + .slider:before { transform: translateX(18px); }
+</style>
+</head>
+<body>
+
+<h1>📋 redirectMap Editor</h1>
+<div class="sub">neeuloveu/Project-1 · redirectMap.json</div>
+
+<!-- Token -->
+<div class="card">
+  <div class="label">🔑 GitHub Token</div>
+  <div class="row" style="margin-bottom:6px">
+    <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="margin:0;flex:1">
+    <button class="btn-m btn-s" onclick="toggleToken()">Hiện</button>
+    <button class="btn-p btn-s" onclick="saveToken()">Lưu</button>
+  </div>
+  <div class="info">
+    GitHub → Settings → Developer settings → Tokens (classic) → tick <b style="color:#a59cf9">repo</b> → Generate
+  </div>
+</div>
+
+<!-- Enabled toggle + reload -->
+<div class="card">
+  <div class="label">⚙️ Cấu hình</div>
+  <div class="toggle-enabled">
+    <label class="switch">
+      <input type="checkbox" id="enabledToggle" checked onchange="toggleEnabled()">
+      <span class="slider"></span>
+    </label>
+    <span style="font-size:13px">Bật redirect</span>
+    <span id="enabledBadge" class="enabled-badge on">ENABLED</span>
+  </div>
+  <button class="btn-p" onclick="fetchMap()" style="width:100%">↻ Tải dữ liệu từ GitHub</button>
+</div>
+
+<!-- Thêm mục mới -->
+<div class="card">
+  <div class="label">➕ Thêm mục mới</div>
+  <input type="text" id="newKey" placeholder='Key  vd: 249-2'>
+  <input type="text" id="newVal" placeholder='Domain đích  vd: linkhuongdan.online'>
+  <button class="btn-g" style="width:100%" onclick="addEntry()">✚ Thêm & Đẩy lên GitHub</button>
+  <div class="info">
+    💡 Key = phần sau dấu / trong shortlink<br>
+    vd: linkhuongdan.online/<b style="color:#a59cf9">249-2</b> → Key là <b style="color:#a59cf9">249-2</b>
+  </div>
+</div>
+
+<!-- Search + list -->
+<input type="text" id="searchInput" placeholder="🔍 Tìm theo key hoặc domain…" oninput="renderList()">
+<div class="count" id="count">Chưa tải dữ liệu</div>
+<div id="list"><div class="loading">Bấm "Tải dữ liệu từ GitHub" để bắt đầu</div></div>
+
+<div id="toast"></div>
+
+<script>
+const OWNER  = 'neeuloveu';
+const REPO   = 'Project-1';
+const FILE   = 'redirectMap.json';
+const BRANCH = 'main';
+const API    = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+const RAW    = `https://raw.githubusercontent.com/${OWNER}/${REPO}/refs/heads/${BRANCH}/${FILE}`;
+
+let entries = [], sha = '', enabled = true, editIdx = -1;
+
+/* ── init ── */
+window.onload = () => {
+  const t = localStorage.getItem('gh_token') || '';
+  document.getElementById('token').value = t;
+};
+
+/* ── helpers ── */
+function getToken() { return document.getElementById('token').value.trim(); }
+
+function saveToken() {
+  localStorage.setItem('gh_token', getToken());
+  toast('✅ Đã lưu token');
+}
+
+function toggleToken() {
+  const el = document.getElementById('token');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function toB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+function toast(msg, type = 'ok') {
+  const colors = { ok:'#34c97a', error:'#f05252', warn:'#f5a623' };
+  const d = document.createElement('div');
+  d.className = 'toast-item';
+  d.style.background = colors[type] || colors.ok;
+  d.textContent = msg;
+  document.getElementById('toast').appendChild(d);
+  setTimeout(() => d.remove(), 3200);
+}
+
+/* ── fetch ── */
+async function fetchMap() {
+  const token = getToken();
+  if (!token) { toast('Nhập token trước', 'warn'); return; }
+  document.getElementById('list').innerHTML = '<div class="loading">Đang tải…</div>';
+  try {
+    const h = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+    const meta = await fetch(API, { headers: h });
+    if (!meta.ok) throw new Error('GitHub lỗi ' + meta.status + ' — kiểm tra lại token');
+    sha = (await meta.json()).sha;
+    const raw  = await fetch(RAW + '?_=' + Date.now());
+    const json = await raw.json();
+    enabled = json.enabled !== false;
+    entries = Object.entries(json.redirects || {}).map(([key, val]) => ({ key, val }));
+    document.getElementById('enabledToggle').checked = enabled;
+    updateEnabledBadge();
+    renderList();
+    toast(`✅ Đã tải ${entries.length} mục`);
+  } catch(e) { toast(e.message, 'error'); document.getElementById('list').innerHTML = '<div class="loading">Tải thất bại — kiểm tra token</div>'; }
+}
+
+/* ── build & push ── */
+function buildJson() {
+  return JSON.stringify({ enabled, redirects: Object.fromEntries(entries.map(e => [e.key, e.val])) }, null, 2);
+}
+
+async function push(msg) {
+  const token = getToken();
+  if (!token) throw new Error('Cần token để lưu');
+  const res = await fetch(API, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: msg, content: toB64(buildJson()), sha, branch: BRANCH })
+  });
+  if (!res.ok) { const e = await res.json().catch(()=>{}); throw new Error((e && e.message) || 'GitHub ' + res.status); }
+  sha = (await res.json()).content?.sha || sha;
+}
+
+/* ── enabled toggle ── */
+function updateEnabledBadge() {
+  const b = document.getElementById('enabledBadge');
+  b.textContent = enabled ? 'ENABLED' : 'DISABLED';
+  b.className = 'enabled-badge ' + (enabled ? 'on' : 'off');
+}
+
+async function toggleEnabled() {
+  enabled = document.getElementById('enabledToggle').checked;
+  updateEnabledBadge();
+  try {
+    await push(enabled ? 'Bật redirect' : 'Tắt redirect');
+    toast(enabled ? '✅ Đã bật redirect' : '⛔ Đã tắt redirect');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+/* ── add ── */
+async function addEntry() {
+  const k = document.getElementById('newKey').value.trim();
+  const v = document.getElementById('newVal').value.trim();
+  if (!k || !v) { toast('Nhập đủ Key và Domain', 'warn'); return; }
+  if (entries.find(e => e.key === k)) { toast('Key đã tồn tại!', 'warn'); return; }
+  try {
+    entries.push({ key: k, val: v });
+    await push(`Thêm: ${k} → ${v}`);
+    document.getElementById('newKey').value = '';
+    document.getElementById('newVal').value = '';
+    renderList();
+    toast(`✅ Đã thêm ${k}`);
+  } catch(e) { entries.pop(); toast(e.message, 'error'); }
+}
+
+/* ── delete ── */
+async function deleteEntry(idx) {
+  if (!confirm(`Xoá "${entries[idx].key}"?`)) return;
+  const removed = entries.splice(idx, 1)[0];
+  try {
+    await push(`Xoá: ${removed.key}`);
+    renderList();
+    toast(`🗑 Đã xoá ${removed.key}`);
+  } catch(e) { entries.splice(idx, 0, removed); toast(e.message, 'error'); }
+}
+
+/* ── edit ── */
+function startEdit(idx) { editIdx = idx; renderList(); }
+function cancelEdit()   { editIdx = -1; renderList(); }
+
+async function saveEdit(idx) {
+  const inp = document.getElementById('edit_' + idx);
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!v) { toast('Nhập domain', 'warn'); return; }
+  const old = entries[idx].val;
+  entries[idx].val = v;
+  try {
+    await push(`Sửa: ${entries[idx].key} → ${v}`);
+    editIdx = -1;
+    renderList();
+    toast(`✅ Đã cập nhật ${entries[idx].key}`);
+  } catch(e) { entries[idx].val = old; toast(e.message, 'error'); }
+}
+
+/* ── render ── */
+function renderList() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = q
+    ? entries.filter(e => e.key.toLowerCase().includes(q) || e.val.toLowerCase().includes(q))
+    : entries;
+
+  document.getElementById('count').textContent = `${filtered.length} / ${entries.length} mục`;
+  const list = document.getElementById('list');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="loading">Không tìm thấy mục nào</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(e => {
+    const idx = entries.indexOf(e);
+    const isEdit = editIdx === idx;
+    const div = document.createElement('div');
+    div.className = 'entry';
+
+    if (isEdit) {
+      div.innerHTML = `
+        <span class="tag">${e.key}</span>
+        <div class="edit-row">
+          <input class="edit-inp" id="edit_${idx}" value="${e.val}" onkeydown="if(event.key==='Enter')saveEdit(${idx});if(event.key==='Escape')cancelEdit()">
+        </div>
+        <div class="actions">
+          <button class="btn-g btn-s" onclick="saveEdit(${idx})">✓</button>
+          <button class="btn-m btn-s" onclick="cancelEdit()">✕</button>
+        </div>`;
+      setTimeout(() => { const el = document.getElementById('edit_' + idx); if(el) el.focus(); }, 50);
+    } else {
+      div.innerHTML = `
+        <span class="tag">${e.key}</span>
+        <span class="val">${e.val}</span>
+        <div class="actions">
+          <button class="btn-p btn-s" onclick="startEdit(${idx})">Sửa</button>
+          <button class="btn-r btn-s" onclick="deleteEntry(${idx})">Xoá</button>
+        </div>`;
+    }
+    list.appendChild(div);
+  });
+}
+</script>
+</body>
+</html>
