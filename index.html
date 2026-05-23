@@ -32,19 +32,12 @@
   .count { font-size: 11px; color: #6b6b88; margin-bottom: 10px; }
   .edit-row { display: flex; gap: 6px; align-items: center; flex: 1; }
   .edit-inp { background: #1a1a26; border: 1px solid #7c6ef7; border-radius: 6px; color: #e8e8f0; padding: 6px 10px; font-size: 12px; font-family: inherit; flex: 1; outline: none; margin: 0; width: auto; }
-  .enabled-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 8px; }
+  .enabled-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
   .on  { background: #1a3a2a; color: #34c97a; border: 1px solid #34c97a44; }
-  .off { background: #3a1a1a; color: #f05252; border: 1px solid #f0525244; }
   .divider { border: none; border-top: 1px solid #1e1e2e; margin: 12px 0; }
   #searchInput { margin-bottom: 8px; }
   .loading { text-align: center; color: #6b6b88; padding: 30px; font-size: 13px; }
-  .toggle-enabled { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
-  .switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; inset: 0; background: #3a3a4a; border-radius: 24px; transition: .3s; }
-  .slider:before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
-  input:checked + .slider { background: #34c97a; }
-  input:checked + .slider:before { transform: translateX(18px); }
+  .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -65,16 +58,12 @@
   </div>
 </div>
 
-<!-- Enabled toggle + reload -->
+<!-- Status + reload -->
 <div class="card">
   <div class="label">⚙️ Cấu hình</div>
-  <div class="toggle-enabled">
-    <label class="switch">
-      <input type="checkbox" id="enabledToggle" checked onchange="toggleEnabled()">
-      <span class="slider"></span>
-    </label>
-    <span style="font-size:13px">Bật redirect</span>
-    <span id="enabledBadge" class="enabled-badge on">ENABLED</span>
+  <div class="status-row">
+    <span style="font-size:13px">Trạng thái redirect</span>
+    <span class="enabled-badge on">ENABLED</span>
   </div>
   <button class="btn-p" onclick="fetchMap()" style="width:100%">↻ Tải dữ liệu từ GitHub</button>
 </div>
@@ -151,10 +140,8 @@ async function fetchMap() {
     sha = (await meta.json()).sha;
     const raw  = await fetch(RAW + '?_=' + Date.now());
     const json = await raw.json();
-    enabled = json.enabled !== false;
+    enabled = true; // luôn giữ enabled = true
     entries = Object.entries(json.redirects || {}).map(([key, val]) => ({ key, val }));
-    document.getElementById('enabledToggle').checked = enabled;
-    updateEnabledBadge();
     renderList();
     toast(`✅ Đã tải ${entries.length} mục`);
   } catch(e) { toast(e.message, 'error'); document.getElementById('list').innerHTML = '<div class="loading">Tải thất bại — kiểm tra token</div>'; }
@@ -162,7 +149,7 @@ async function fetchMap() {
 
 /* ── build & push ── */
 function buildJson() {
-  return JSON.stringify({ enabled, redirects: Object.fromEntries(entries.map(e => [e.key, e.val])) }, null, 2);
+  return JSON.stringify({ enabled: true, redirects: Object.fromEntries(entries.map(e => [e.key, e.val])) }, null, 2);
 }
 
 let pushing = false;
@@ -173,7 +160,6 @@ async function push(msg) {
   if (pushing) throw new Error('Đang lưu, vui lòng chờ…');
   pushing = true;
   try {
-    /* Luôn lấy SHA mới nhất trước khi push để tránh conflict */
     const hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
     const metaRes = await fetch(API, { headers: hdr });
     if (!metaRes.ok) throw new Error('Không lấy được SHA — kiểm tra token');
@@ -189,22 +175,6 @@ async function push(msg) {
   } finally {
     pushing = false;
   }
-}
-
-/* ── enabled toggle ── */
-function updateEnabledBadge() {
-  const b = document.getElementById('enabledBadge');
-  b.textContent = enabled ? 'ENABLED' : 'DISABLED';
-  b.className = 'enabled-badge ' + (enabled ? 'on' : 'off');
-}
-
-async function toggleEnabled() {
-  enabled = document.getElementById('enabledToggle').checked;
-  updateEnabledBadge();
-  try {
-    await push(enabled ? 'Bật redirect' : 'Tắt redirect');
-    toast(enabled ? '✅ Đã bật redirect' : '⛔ Đã tắt redirect');
-  } catch(e) { toast(e.message, 'error'); }
 }
 
 /* ── add ── */
