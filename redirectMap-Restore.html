@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Khôi phục redirectMap</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #e8e8f0; font-family: 'Courier New', monospace; padding: 20px 14px 80px; max-width: 700px; margin: 0 auto; }
+  h1 { color: #a59cf9; font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #6b6b88; font-size: 11px; margin-bottom: 22px; }
+  .card { background: #16161f; border: 1px solid #1e1e2e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .label { font-size: 10px; color: #6b6b88; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; text-transform: uppercase; }
+  input { background: #1a1a26; border: 1px solid #1e1e2e; border-radius: 7px; color: #e8e8f0; padding: 9px 12px; font-size: 13px; font-family: inherit; width: 100%; outline: none; margin-bottom: 8px; }
+  input:focus { border-color: #7c6ef7; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { border: none; border-radius: 7px; color: #fff; font-size: 12px; font-weight: 700; padding: 9px 16px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: opacity .15s; }
+  button:active { opacity: 0.65; }
+  .btn-p { background: #7c6ef7; }
+  .btn-g { background: #34c97a; }
+  .btn-r { background: #f05252; }
+  .btn-m { background: #3a3a4a; }
+  .btn-s { padding: 6px 11px; font-size: 11px; }
+  .commit-item { background: #16161f; border: 1px solid #1e1e2e; border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  .commit-sha { font-size: 10px; color: #a59cf9; font-weight: 700; margin-bottom: 4px; }
+  .commit-msg { font-size: 12px; color: #e8e8f0; margin-bottom: 4px; }
+  .commit-date { font-size: 10px; color: #6b6b88; margin-bottom: 10px; }
+  .commit-actions { display: flex; gap: 6px; }
+  .preview-box { background: #111118; border: 1px solid #1e1e2e; border-radius: 8px; padding: 10px; font-size: 11px; color: #6b6b88; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; margin-top: 8px; display: none; }
+  #toast { position: fixed; bottom: 20px; right: 14px; z-index: 999; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  .toast-item { padding: 10px 16px; border-radius: 9px; font-size: 12px; font-weight: 700; color: #fff; max-width: 300px; animation: sin .2s ease; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+  @keyframes sin { from { opacity:0; transform:translateX(20px); } to { opacity:1; } }
+  .info { font-size: 10px; color: #6b6b88; margin-top: 6px; line-height: 1.5; }
+  .loading { text-align: center; color: #6b6b88; padding: 30px; font-size: 13px; }
+  .confirm-bar { background: #1a2a1a; border: 1px solid #34c97a44; border-radius: 10px; padding: 12px; margin-top: 10px; display: none; }
+  .confirm-bar p { font-size: 12px; color: #34c97a; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>⏪ Khôi phục redirectMap</h1>
+<div class="sub">neeuloveu/Project-1 · redirectMap.json</div>
+
+<!-- Token -->
+<div class="card">
+  <div class="label">🔑 GitHub Token</div>
+  <div class="row" style="margin-bottom:6px">
+    <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="margin:0;flex:1">
+    <button class="btn-m btn-s" onclick="toggleToken()">Hiện</button>
+    <button class="btn-p btn-s" onclick="saveToken()">Lưu</button>
+  </div>
+  <button class="btn-p" onclick="loadCommits()" style="width:100%;margin-top:4px">↻ Tải lịch sử commit</button>
+  <div class="info">⚠️ Token cần quyền <b style="color:#a59cf9">repo</b></div>
+</div>
+
+<!-- Commit list -->
+<div id="commitList"><div class="loading">Bấm "Tải lịch sử commit" để bắt đầu</div></div>
+
+<div id="toast"></div>
+
+<script>
+const OWNER  = 'neeuloveu';
+const REPO   = 'Project-1';
+const FILE   = 'redirectMap.json';
+const BRANCH = 'main';
+const API    = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
+
+let currentSha = '';
+let previewOpen = {};
+
+window.onload = () => {
+  const t = localStorage.getItem('gh_token') || '';
+  document.getElementById('token').value = t;
+};
+
+function getToken() { return document.getElementById('token').value.trim(); }
+function saveToken() { localStorage.setItem('gh_token', getToken()); toast('✅ Đã lưu token'); }
+function toggleToken() {
+  const el = document.getElementById('token');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+function toB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+
+function toast(msg, type = 'ok') {
+  const colors = { ok:'#34c97a', error:'#f05252', warn:'#f5a623' };
+  const d = document.createElement('div');
+  d.className = 'toast-item';
+  d.style.background = colors[type] || colors.ok;
+  d.textContent = msg;
+  document.getElementById('toast').appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('vi-VN');
+}
+
+async function loadCommits() {
+  const token = getToken();
+  if (!token) { toast('Nhập token trước', 'warn'); return; }
+  const list = document.getElementById('commitList');
+  list.innerHTML = '<div class="loading">Đang tải lịch sử…</div>';
+
+  try {
+    const hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+
+    // Lấy SHA hiện tại
+    const metaRes = await fetch(API, { headers: hdr });
+    if (!metaRes.ok) throw new Error('Lỗi ' + metaRes.status + ' — kiểm tra token');
+    currentSha = (await metaRes.json()).sha;
+
+    // Lấy commits của file
+    const commitsRes = await fetch(
+      `https://api.github.com/repos/${OWNER}/${REPO}/commits?path=${FILE}&sha=${BRANCH}&per_page=20`,
+      { headers: hdr }
+    );
+    if (!commitsRes.ok) throw new Error('Không lấy được commits');
+    const commits = await commitsRes.json();
+
+    if (!commits.length) { list.innerHTML = '<div class="loading">Không có commit nào</div>'; return; }
+
+    list.innerHTML = '';
+    commits.forEach((c, i) => {
+      const div = document.createElement('div');
+      div.className = 'commit-item';
+      div.id = 'commit_' + i;
+      const isCurrent = i === 0;
+      div.innerHTML = `
+        <div class="commit-sha">${c.sha.slice(0,7)} ${isCurrent ? '<span style="color:#34c97a">(hiện tại)</span>' : ''}</div>
+        <div class="commit-msg">${escHtml(c.commit.message)}</div>
+        <div class="commit-date">🕐 ${formatDate(c.commit.author.date)} · ${escHtml(c.commit.author.name)}</div>
+        <div class="commit-actions">
+          <button class="btn-m btn-s" onclick="togglePreview(${i}, '${c.sha}')">👁 Xem nội dung</button>
+          ${!isCurrent ? `<button class="btn-r btn-s" onclick="showConfirm(${i}, '${c.sha}')">⏪ Khôi phục</button>` : ''}
+        </div>
+        <div class="preview-box" id="preview_${i}"></div>
+        <div class="confirm-bar" id="confirm_${i}">
+          <p>⚠️ Khôi phục commit <b>${c.sha.slice(0,7)}</b> sẽ ghi đè file hiện tại. Chắc chắn?</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn-r" onclick="doRestore('${c.sha}', ${i})">✓ Xác nhận khôi phục</button>
+            <button class="btn-m btn-s" onclick="hideConfirm(${i})">Huỷ</button>
+          </div>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="loading">Tải thất bại — kiểm tra token</div>';
+    toast(e.message, 'error');
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function togglePreview(i, sha) {
+  const box = document.getElementById('preview_' + i);
+  if (box.style.display === 'block') { box.style.display = 'none'; previewOpen[i] = false; return; }
+  box.style.display = 'block';
+  box.textContent = 'Đang tải…';
+  try {
+    const token = getToken();
+    const hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}?ref=${sha}`, { headers: hdr });
+    if (!res.ok) throw new Error('Lỗi ' + res.status);
+    const data = await res.json();
+    const content = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    box.textContent = content;
+  } catch(e) { box.textContent = 'Không tải được: ' + e.message; }
+}
+
+function showConfirm(i, sha) {
+  document.getElementById('confirm_' + i).style.display = 'block';
+}
+function hideConfirm(i) {
+  document.getElementById('confirm_' + i).style.display = 'none';
+}
+
+async function doRestore(sha, i) {
+  const token = getToken();
+  if (!token) { toast('Cần token', 'warn'); return; }
+  try {
+    const hdr = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+
+    // Lấy nội dung commit cũ
+    const oldRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}?ref=${sha}`, { headers: hdr });
+    if (!oldRes.ok) throw new Error('Không lấy được nội dung cũ');
+    const oldData = await oldRes.json();
+    const oldContent = oldData.content.replace(/\n/g,''); // base64 gốc
+
+    // Lấy SHA hiện tại mới nhất
+    const curRes = await fetch(API, { headers: hdr });
+    if (!curRes.ok) throw new Error('Không lấy được SHA hiện tại');
+    currentSha = (await curRes.json()).sha;
+
+    // Push khôi phục
+    const pushRes = await fetch(API, {
+      method: 'PUT',
+      headers: { ...hdr, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Khôi phục từ commit ${sha.slice(0,7)}`,
+        content: oldContent,
+        sha: currentSha,
+        branch: BRANCH
+      })
+    });
+    if (!pushRes.ok) {
+      const e = await pushRes.json().catch(()=>{});
+      throw new Error((e && e.message) || 'GitHub ' + pushRes.status);
+    }
+
+    toast(`✅ Đã khôi phục từ commit ${sha.slice(0,7)}!`);
+    hideConfirm(i);
+    setTimeout(() => loadCommits(), 1200);
+  } catch(e) { toast(e.message, 'error'); }
+}
+</script>
+</body>
+</html>
